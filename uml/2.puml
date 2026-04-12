@@ -1,0 +1,97 @@
+@startuml
+left to right direction
+hide methods
+hide stereotypes
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam linetype ortho
+
+entity "Студент" as Student {
+  * id_студента : int
+  --
+  ФИО : string
+  группа : string
+  номер_зачетки : string
+}
+
+entity "Преподаватель" as Teacher {
+  * id_преподавателя : int
+  --
+  ФИО : string
+  кафедра : string
+  должность : string
+}
+
+entity "Документ" as Document {
+  * id_документа : int
+  --
+  название : string
+  имя_файла : string
+  формат : string
+  дата_загрузки : date
+  статус_проверки : string
+}
+
+entity "Тип документа" as DocType {
+  * id_типа : int
+  --
+  название_типа : string
+}
+
+entity "Семестр" as Semester {
+  * id_семестра : int
+  --
+  номер_семестра : int
+  учебный_год : string
+}
+
+entity "Требование" as Requirement {
+  * id_требования : int
+  --
+  название : string
+  описание : string
+  категория : string
+  обязательность : boolean
+}
+
+entity "Проверка" as Check {
+  * id_проверки : int
+  --
+  дата_проверки : date
+  результат : string
+  комментарий : string
+}
+
+entity "Отчёт" as Report {
+  * id_отчёта : int
+  --
+  дата_формирования : date
+  итог : string
+  путь_к_отчёту : string
+}
+
+entity "Нарушение" as Violation {
+  * id_нарушения : int
+  --
+  описание : string
+  критичность : string
+  рекомендация : string
+}
+
+entity "ТипДокумента_Требование" as TypeReq {
+  * id_типа : int
+  * id_требования : int
+}
+
+Student --o{ Document : загружает
+Teacher --o{ Check : выполняет
+Document --o{ Check : проходит
+DocType --o{ Document : имеет
+Semester --o{ Document : относится_к
+Check -- Report : формирует
+Check --o{ Violation : выявляет
+Requirement --o{ Violation : определяет
+DocType --o{ TypeReq : относится_к
+Requirement ||--o{ TypeReq : включает
+
+@enduml

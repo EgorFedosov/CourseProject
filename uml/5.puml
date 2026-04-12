@@ -1,0 +1,55 @@
+@startuml
+title Архитектурная схема верхнего уровня
+
+left to right direction
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+
+actor "Пользователь\n(Студент/Преподаватель)" as User
+
+package "Слой интерфейса" as InterfaceLayer #DCECF8 {
+  component "Веб-интерфейс системы" as WebUI
+}
+
+package "Серверный слой" as ServerLayer #EEEEEE {
+  component "Оркестратор\nпроверки документов" as Orchestrator
+  component "Сервис загрузки\nдокументов" as UploadService
+  component "Сервис формирования\nотчётов" as ReportService
+
+  database "Хранилище\nдокументов" as DocDB
+  database "Хранилище\nрезультатов" as ResultDB
+
+  package "Интеллектуальный контур" as AIBlock #F4EDBE {
+    component "Подсистема анализа\nдокументов" as AnalysisSystem
+    component "Подсистема определения\nтипа документа" as TypeSystem
+    component "Подсистема определения\nсеместра" as SemesterSystem
+    component "Подсистема проверки\nтребований" as RequirementSystem
+    database "База знаний\nправил проверки" as KB
+  }
+}
+
+User -> WebUI : взаимодействие
+
+WebUI -> Orchestrator : запросы
+Orchestrator -> UploadService : загрузка документа
+UploadService -> DocDB : сохранение документа
+
+Orchestrator -> AnalysisSystem : запуск анализа
+AnalysisSystem -> TypeSystem
+AnalysisSystem -> SemesterSystem
+AnalysisSystem -> RequirementSystem
+
+TypeSystem --> KB
+SemesterSystem --> KB
+RequirementSystem --> KB
+
+AnalysisSystem --> ResultDB : результаты анализа
+RequirementSystem --> ResultDB : нарушения
+
+Orchestrator --> ReportService : формирование отчёта
+ReportService --> ResultDB : получение данных
+ReportService --> WebUI : готовый отчёт
+
+@enduml\
