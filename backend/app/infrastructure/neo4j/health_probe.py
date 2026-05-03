@@ -1,21 +1,20 @@
-﻿from dataclasses import dataclass
+from dataclasses import dataclass
 
 from app.application.dto.health import ServiceStatus
-from app.core.config import Settings
+from app.infrastructure.neo4j.client import Neo4jClient
 
 
 @dataclass(frozen=True, slots=True)
-class Neo4jConfigHealthProbe:
-    settings: Settings
+class Neo4jHealthProbe:
+    client: Neo4jClient
 
     def check(self) -> ServiceStatus:
-        has_connection_settings = bool(
-            self.settings.neo4j_uri
-            and self.settings.neo4j_user
-            and self.settings.neo4j_password
-        )
+        if not self.client.settings.has_neo4j_config:
+            return ServiceStatus.NOT_CONFIGURED
 
-        if has_connection_settings:
-            return ServiceStatus.UP
+        try:
+            self.client.verify_connectivity()
+        except Exception:
+            return ServiceStatus.DOWN
 
-        return ServiceStatus.NOT_CONFIGURED
+        return ServiceStatus.UP

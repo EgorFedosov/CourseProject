@@ -18,10 +18,17 @@ class Settings(BaseSettings):
     neo4j_uri: str | None = None
     neo4j_user: str | None = None
     neo4j_password: str | None = None
+    neo4j_database: str = "neo4j"
+    neo4j_init_on_startup: bool = True
+    neo4j_assets_path: str = "../neo4j"
 
     ai_provider: str | None = None
     ai_api_key: str | None = None
     ai_model: str | None = None
+
+    @property
+    def has_neo4j_config(self) -> bool:
+        return bool(self.neo4j_uri and self.neo4j_user and self.neo4j_password)
 
 
 @lru_cache
