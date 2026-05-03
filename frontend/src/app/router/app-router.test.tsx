@@ -1,6 +1,18 @@
 import { cleanup, render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { App } from '../App'
+
+vi.mock('../../shared/api', () => ({
+  useHealthQuery: () => ({
+    isLoading: false,
+    error: null,
+    data: {
+      api_status: 'alive',
+      neo4j_status: 'alive',
+      ai_status: 'unavailable',
+    },
+  }),
+}))
 
 describe('App routing', () => {
   afterEach(() => {

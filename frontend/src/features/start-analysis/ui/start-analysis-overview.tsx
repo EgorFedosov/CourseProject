@@ -5,7 +5,7 @@ export const StartAnalysisOverview = () => {
   return (
     <PageCard
       title="AnalysisPage"
-      description="Точка входа для POST /api/v1/analyses/start и GET /api/v1/analyses/{check_id}."
+      description="Точки входа для POST /api/v1/analyses/start (useStartAnalysisMutation) и GET /api/v1/analyses/{check_id} (useAnalysisStatusQuery)."
     >
       <p>На следующем этапе здесь подключается запуск анализа и polling статуса.</p>
       <AnalysisStatusTimeline />

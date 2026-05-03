@@ -1,10 +1,13 @@
 ﻿import { NotificationsProvider } from './providers/notifications-provider'
+import { QueryProvider } from './providers/query-client-provider'
 import { AppRouter } from './router/app-router'
 
 export const App = () => {
   return (
-    <NotificationsProvider>
-      <AppRouter />
-    </NotificationsProvider>
+    <QueryProvider>
+      <NotificationsProvider>
+        <AppRouter />
+      </NotificationsProvider>
+    </QueryProvider>
   )
 }

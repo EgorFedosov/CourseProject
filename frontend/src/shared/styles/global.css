@@ -65,6 +65,33 @@ a {
   font-size: 1.35rem;
 }
 
+.health-badge {
+  margin-top: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.health-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+}
+
+.health-dot--success {
+  background: var(--success);
+}
+
+.health-dot--warning {
+  background: var(--warning);
+}
+
+.health-dot--error {
+  background: var(--error);
+}
+
 .app-nav {
   display: flex;
   flex-wrap: wrap;

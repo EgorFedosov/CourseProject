@@ -1,5 +1,6 @@
 ﻿import { NavLink, Outlet } from 'react-router-dom'
 import { navigationRoutes } from '../../entities/navigation/model/navigation-routes'
+import { HealthStatusBadge } from '../../features/health-status/ui/health-status-badge'
 import { NotificationsPanel } from '../../shared/ui/notifications-panel'
 
 const navClassName = ({ isActive }: { isActive: boolean }) =>
@@ -13,6 +14,7 @@ export const AppShell = () => {
           <div>
             <p className="app-header__kicker">CourseProject</p>
             <h1>Intelligent Document Checker</h1>
+            <HealthStatusBadge />
           </div>
           <nav className="app-nav" aria-label="Основная навигация">
             {navigationRoutes.map((route) => (
