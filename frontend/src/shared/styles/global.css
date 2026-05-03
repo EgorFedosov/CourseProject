@@ -1,0 +1,250 @@
+﻿:root {
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --surface-accent: #f0f4ff;
+  --text: #17212b;
+  --text-muted: #566474;
+  --border: #d4dbe3;
+  --brand: #0059b3;
+  --brand-soft: #dcecff;
+  --success: #0f766e;
+  --warning: #b45309;
+  --error: #b91c1c;
+  --shadow: 0 14px 30px rgba(23, 33, 43, 0.07);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+  background: radial-gradient(circle at top right, #e8f0ff 0, #f4f6f8 45%), var(--bg);
+  color: var(--text);
+}
+
+a {
+  color: inherit;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.app-header {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.app-header__content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem 1.25rem;
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.app-header__kicker {
+  margin: 0;
+  color: var(--brand);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+.app-header h1 {
+  margin: 0.15rem 0 0;
+  font-size: 1.35rem;
+}
+
+.app-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.app-nav__link {
+  text-decoration: none;
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  background: #fff;
+  transition: 150ms ease;
+}
+
+.app-nav__link:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.app-nav__link--active {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-weight: 600;
+}
+
+.app-layout {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 1.5rem;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr 320px;
+}
+
+.app-main {
+  min-width: 0;
+}
+
+.page-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.page-card__header {
+  padding: 1rem 1.1rem;
+  background: linear-gradient(120deg, var(--surface-accent), #ffffff);
+  border-bottom: 1px solid var(--border);
+}
+
+.page-card__header h1 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.page-card__header p {
+  margin: 0.4rem 0 0;
+  color: var(--text-muted);
+  max-width: 64ch;
+}
+
+.page-card__body {
+  padding: 1rem 1.1rem;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.status-timeline {
+  margin: 0;
+  padding: 0 0 0 1rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.status-timeline span {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-family: 'Consolas', monospace;
+  font-size: 0.83rem;
+}
+
+.notifications-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 0.95rem;
+}
+
+.notifications-panel h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.notifications-panel ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.9rem 0 0;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.notifications-empty {
+  margin: 0.7rem 0 0;
+  color: var(--text-muted);
+}
+
+.notification {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.7rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.notification p {
+  margin: 0.2rem 0;
+  font-weight: 600;
+}
+
+.notification small {
+  color: var(--text-muted);
+}
+
+.notification button {
+  justify-self: start;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 8px;
+  padding: 0.35rem 0.55rem;
+  cursor: pointer;
+}
+
+.notification--info {
+  border-color: #9ec3ff;
+  background: #f3f8ff;
+}
+
+.notification--success {
+  border-color: #75cbbf;
+  background: #f0fdf9;
+}
+
+.notification--warning {
+  border-color: #f9c16f;
+  background: #fffbeb;
+}
+
+.notification--error {
+  border-color: #f2a2a2;
+  background: #fff5f5;
+}
+
+@media (max-width: 980px) {
+  .app-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-header__content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .app-nav {
+    width: 100%;
+  }
+
+  .app-nav__link {
+    flex: 1;
+    text-align: center;
+  }
+}
