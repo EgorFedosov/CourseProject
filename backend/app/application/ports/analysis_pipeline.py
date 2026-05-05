@@ -1,6 +1,6 @@
 ﻿from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 
 from app.domain.entities.requirement import Requirement
@@ -11,6 +11,7 @@ from app.domain.entities.violation import Violation
 class ParsedDocument:
     document_id: str
     raw_text: str
+    features: dict[str, object] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)

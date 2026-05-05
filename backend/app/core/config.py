@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     ai_provider: str | None = None
     ai_api_key: str | None = None
     ai_model: str | None = None
+    ai_timeout_seconds: float = 30.0
+    ai_max_retries: int = 2
+    ai_retry_backoff_seconds: float = 1.0
+    ai_retry_max_backoff_seconds: float = 8.0
+    ai_similar_cases_limit: int = 5
 
     @property
     def has_neo4j_config(self) -> bool:
