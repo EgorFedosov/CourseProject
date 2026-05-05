@@ -63,9 +63,9 @@ def test_invalid_upload_request_has_stable_error_contract() -> None:
         files={"file": ("invalid.txt", b"invalid", "text/plain")},
     )
 
-    assert response.status_code == 404
+    assert response.status_code == 400
     payload = response.json()
-    assert payload["code"] == "HTTP_ERROR"
-    assert payload["message"] == "Not Found"
-    assert payload["details"] is None
+    assert payload["code"] == "UNSUPPORTED_FILE_FORMAT"
+    assert payload["message"] == "Only PDF and DOCX files are supported."
+    assert payload["details"] == {"allowed_formats": ["pdf", "docx"]}
     assert isinstance(payload["trace_id"], str)

@@ -27,6 +27,7 @@ class ReportSnapshot:
     violations: list[Violation]
     recommendations: list[str]
     overall_status: str
+    summary: str | None = None
 
 
 class AnalysisRepository(Protocol):

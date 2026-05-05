@@ -1,8 +1,12 @@
-﻿from fastapi import Depends
+from pathlib import Path
+
+from fastapi import Depends
 
 from app.application.ports.ai_assistant import AiAssistant
 from app.application.ports.analysis_pipeline import AnalysisPipeline
 from app.application.ports.analysis_repository import AnalysisRepository
+from app.application.ports.document_repository import DocumentRepository
+from app.application.ports.document_storage import DocumentStorage
 from app.application.ports.feedback_repository import FeedbackRepository
 from app.application.ports.rule_read_repository import RuleReadRepository
 from app.application.use_cases.get_analysis_status import GetAnalysisStatusUseCase
@@ -11,6 +15,7 @@ from app.application.use_cases.start_analysis import StartAnalysisUseCase
 from app.application.use_cases.submit_feedback_corrections import (
     SubmitFeedbackCorrectionsUseCase,
 )
+from app.application.use_cases.upload_document import UploadDocumentUseCase
 from app.core.config import Settings, get_settings
 from app.infrastructure.ai.adaptation_assistant import AdaptationAiAssistant
 from app.infrastructure.ai.gateway import HttpAiGateway
@@ -22,6 +27,9 @@ from app.infrastructure.neo4j.graph_initializer import get_neo4j_assets_root
 from app.infrastructure.neo4j.repositories.analysis_repository import (
     Neo4jAnalysisRepository,
 )
+from app.infrastructure.neo4j.repositories.document_repository import (
+    Neo4jDocumentRepository,
+)
 from app.infrastructure.neo4j.repositories.feedback_repository import (
     Neo4jFeedbackRepository,
 )
@@ -29,6 +37,7 @@ from app.infrastructure.neo4j.repositories.rule_repository import Neo4jRuleRepos
 from app.infrastructure.pipeline.deterministic_pipeline import (
     DeterministicAnalysisPipeline,
 )
+from app.infrastructure.storage.local_document_storage import LocalDocumentStorage
 
 
 def get_cypher_loader(settings: Settings = Depends(get_settings)) -> CypherFileLoader:
@@ -39,6 +48,14 @@ def get_analysis_repository(
     cypher_loader: CypherFileLoader = Depends(get_cypher_loader),
 ) -> AnalysisRepository:
     return Neo4jAnalysisRepository(
+        client=get_neo4j_client(), cypher_loader=cypher_loader
+    )
+
+
+def get_document_repository(
+    cypher_loader: CypherFileLoader = Depends(get_cypher_loader),
+) -> DocumentRepository:
+    return Neo4jDocumentRepository(
         client=get_neo4j_client(), cypher_loader=cypher_loader
     )
 
@@ -55,6 +72,14 @@ def get_feedback_repository(
     return Neo4jFeedbackRepository(
         client=get_neo4j_client(), cypher_loader=cypher_loader
     )
+
+
+def get_document_storage(
+    settings: Settings = Depends(get_settings),
+) -> DocumentStorage:
+    backend_root = Path(__file__).resolve().parents[4]
+    storage_root = (backend_root / settings.file_storage_path).resolve()
+    return LocalDocumentStorage(root=storage_root)
 
 
 def get_ai_assistant(settings: Settings = Depends(get_settings)) -> AiAssistant | None:
@@ -82,6 +107,18 @@ def get_analysis_pipeline(
         feedback_repository=feedback_repository,
         ai_assistant=ai_assistant,
         similar_cases_limit=settings.ai_similar_cases_limit,
+    )
+
+
+def get_upload_document_use_case(
+    repository: DocumentRepository = Depends(get_document_repository),
+    storage: DocumentStorage = Depends(get_document_storage),
+    settings: Settings = Depends(get_settings),
+) -> UploadDocumentUseCase:
+    return UploadDocumentUseCase(
+        repository=repository,
+        storage=storage,
+        max_upload_bytes=settings.max_upload_bytes,
     )
 
 

@@ -1,6 +1,10 @@
-﻿from dataclasses import dataclass
+from dataclasses import dataclass
 
-from app.application.dto.report import ReportResponseDTO, ReportViolationDTO
+from app.application.dto.report import (
+    AppliedRuleDTO,
+    ReportResponseDTO,
+    ReportViolationDTO,
+)
 from app.application.ports.analysis_repository import AnalysisRepository
 from app.core.errors import AppError
 from app.domain.value_objects.analysis_status import AnalysisStatus
@@ -37,9 +41,12 @@ class GetReportUseCase:
 
         return ReportResponseDTO(
             check_id=report.check_id,
-            type=report.document_type,
-            semester=report.semester,
-            rules=report.rules,
+            overall_status=report.overall_status,
+            determined_type=report.document_type,
+            determined_semester=report.semester,
+            applied_rules=[
+                AppliedRuleDTO(code=rule_code) for rule_code in report.rules
+            ],
             violations=[
                 ReportViolationDTO(
                     violation_id=violation.violation_id,
@@ -52,5 +59,8 @@ class GetReportUseCase:
                 for violation in report.violations
             ],
             recommendations=report.recommendations,
-            overall_status=report.overall_status,
+            summary=report.summary,
+            type=report.document_type,
+            semester=report.semester,
+            rules=report.rules,
         )

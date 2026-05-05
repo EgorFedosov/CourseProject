@@ -1,4 +1,4 @@
-﻿from dataclasses import dataclass
+from dataclasses import dataclass
 
 from fastapi.testclient import TestClient
 
@@ -7,21 +7,51 @@ from app.api.v1.routes.analysis_dependencies import (
     get_report_use_case,
     get_start_analysis_use_case,
     get_submit_feedback_use_case,
+    get_upload_document_use_case,
 )
 from app.application.dto.analysis import (
     AnalysisStatusResponseDTO,
     StartAnalysisRequestDTO,
     StartAnalysisResponseDTO,
 )
+from app.application.dto.document import UploadDocumentResponseDTO
 from app.application.dto.feedback import (
     FeedbackCorrectionsRequestDTO,
     FeedbackCorrectionsResponseDTO,
 )
-from app.application.dto.report import ReportResponseDTO, ReportViolationDTO
+from app.application.dto.report import (
+    AppliedRuleDTO,
+    ReportResponseDTO,
+    ReportViolationDTO,
+)
 from app.domain.value_objects.analysis_status import AnalysisStatus
 from app.main import app
 
 client = TestClient(app)
+
+
+@dataclass
+class _StubUploadDocumentUseCase:
+    captured_filename: str | None = None
+    captured_content_type: str | None = None
+    captured_size: int | None = None
+
+    def execute(
+        self,
+        *,
+        filename: str,
+        content_type: str | None,
+        content: bytes,
+    ) -> UploadDocumentResponseDTO:
+        self.captured_filename = filename
+        self.captured_content_type = content_type
+        self.captured_size = len(content)
+        return UploadDocumentResponseDTO(
+            document_id="doc-123",
+            filename=filename,
+            format="pdf",
+            status="UPLOADED",
+        )
 
 
 @dataclass
@@ -58,9 +88,10 @@ class _StubReportUseCase:
         _ = check_id
         return ReportResponseDTO(
             check_id="check-123",
-            type="COURSE_PROJECT_NOTE",
-            semester=4,
-            rules=["REQ-INTRO-001"],
+            overall_status="partially_compliant",
+            determined_type="COURSE_PROJECT_NOTE",
+            determined_semester=4,
+            applied_rules=[AppliedRuleDTO(code="REQ-INTRO-001")],
             violations=[
                 ReportViolationDTO(
                     violation_id="v-1",
@@ -72,7 +103,10 @@ class _StubReportUseCase:
                 )
             ],
             recommendations=["Add an Introduction section."],
-            overall_status="partially_compliant",
+            summary="Requirement violations detected.",
+            type="COURSE_PROJECT_NOTE",
+            semester=4,
+            rules=["REQ-INTRO-001"],
         )
 
 
@@ -91,6 +125,31 @@ class _StubFeedbackUseCase:
             ai_mode="RULE_ONLY",
             ai_suggestion=None,
         )
+
+
+def test_upload_document_endpoint_contract() -> None:
+    stub_use_case = _StubUploadDocumentUseCase()
+    app.dependency_overrides[get_upload_document_use_case] = lambda: stub_use_case
+
+    try:
+        response = client.post(
+            "/api/v1/documents/upload",
+            files={"file": ("report.pdf", b"%PDF-1.4", "application/pdf")},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload == {
+        "document_id": "doc-123",
+        "filename": "report.pdf",
+        "format": "pdf",
+        "status": "UPLOADED",
+    }
+    assert stub_use_case.captured_filename == "report.pdf"
+    assert stub_use_case.captured_content_type == "application/pdf"
+    assert stub_use_case.captured_size == 8
 
 
 def test_start_analysis_endpoint_contract() -> None:
@@ -142,9 +201,11 @@ def test_report_endpoint_contract() -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["check_id"] == "check-123"
-    assert payload["type"] == "COURSE_PROJECT_NOTE"
-    assert payload["semester"] == 4
-    assert payload["rules"] == ["REQ-INTRO-001"]
+    assert payload["determined_type"] == "COURSE_PROJECT_NOTE"
+    assert payload["determined_semester"] == 4
+    assert payload["applied_rules"] == [
+        {"code": "REQ-INTRO-001", "title": None, "category": None, "severity": None}
+    ]
     assert payload["overall_status"] == "partially_compliant"
     assert len(payload["violations"]) == 1
     assert payload["violations"][0]["violation_id"] == "v-1"

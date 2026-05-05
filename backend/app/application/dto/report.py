@@ -1,6 +1,13 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from pydantic import BaseModel, Field
+
+
+class AppliedRuleDTO(BaseModel):
+    code: str = Field(..., min_length=1)
+    title: str | None = None
+    category: str | None = None
+    severity: str | None = None
 
 
 class ReportViolationDTO(BaseModel):
@@ -14,9 +21,15 @@ class ReportViolationDTO(BaseModel):
 
 class ReportResponseDTO(BaseModel):
     check_id: str
-    type: str
-    semester: int = Field(..., ge=1, le=12)
-    rules: list[str]
+    overall_status: str
+    determined_type: str
+    determined_semester: int = Field(..., ge=1, le=12)
+    applied_rules: list[AppliedRuleDTO]
     violations: list[ReportViolationDTO]
     recommendations: list[str]
-    overall_status: str
+    summary: str | None = None
+
+    # Backward-compatible fields for clients that still use legacy names.
+    type: str | None = None
+    semester: int | None = Field(default=None, ge=1, le=12)
+    rules: list[str] = Field(default_factory=list)

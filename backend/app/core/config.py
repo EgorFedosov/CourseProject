@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     app_host: str = "0.0.0.0"
     app_port: int = 8000
     api_v1_prefix: str = "/api/v1"
+    file_storage_path: str = "./storage/documents"
+    max_upload_mb: int = 20
 
     neo4j_uri: str | None = None
     neo4j_user: str | None = None
@@ -34,6 +36,10 @@ class Settings(BaseSettings):
     @property
     def has_neo4j_config(self) -> bool:
         return bool(self.neo4j_uri and self.neo4j_user and self.neo4j_password)
+
+    @property
+    def max_upload_bytes(self) -> int:
+        return self.max_upload_mb * 1024 * 1024
 
 
 @lru_cache

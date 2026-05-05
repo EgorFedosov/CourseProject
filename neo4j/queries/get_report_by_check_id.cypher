@@ -8,4 +8,5 @@ RETURN
     report.applied_rules_json AS rules_json,
     report.violations_json AS violations_json,
     report.recommendations_json AS recommendations_json,
-    report.overall_status AS overall_status;
+    report.overall_status AS overall_status,
+    report.summary AS summary;

@@ -187,6 +187,7 @@ class Neo4jAnalysisRepository(AnalysisRepository):
                     report.recommendations, ensure_ascii=True
                 ),
                 overall_status=report.overall_status,
+                summary=report.summary,
             ).consume()
 
     def get_status(self, *, check_id: str) -> AnalysisStatusSnapshot | None:
@@ -241,6 +242,7 @@ class Neo4jAnalysisRepository(AnalysisRepository):
 
         document_type = record.get("document_type")
         overall_status = record.get("overall_status")
+        summary = record.get("summary")
 
         return ReportSnapshot(
             check_id=record["check_id"],
@@ -255,4 +257,5 @@ class Neo4jAnalysisRepository(AnalysisRepository):
             overall_status=(
                 overall_status if isinstance(overall_status, str) else "unknown"
             ),
+            summary=summary if isinstance(summary, str) else None,
         )

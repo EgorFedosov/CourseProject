@@ -106,6 +106,7 @@ class StartAnalysisUseCase:
                     violations=violations,
                     recommendations=built_report.recommendations,
                     overall_status=built_report.overall_status,
+                    summary=built_report.summary,
                 )
             )
 
