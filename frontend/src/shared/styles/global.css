@@ -165,6 +165,131 @@ a {
   gap: 0.9rem;
 }
 
+.feedback-check-id-form {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.feedback-check-id-form label,
+.feedback-form label {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text);
+  display: grid;
+  gap: 0.4rem;
+}
+
+.feedback-check-id-form__controls {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.feedback-check-id-form input,
+.feedback-form input,
+.feedback-form textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.55rem 0.65rem;
+  font: inherit;
+}
+
+.feedback-check-id-form button,
+.feedback-actions button {
+  border: 1px solid var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand);
+  border-radius: 10px;
+  padding: 0.55rem 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.feedback-check-id-form button:disabled,
+.feedback-actions button:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.feedback-form fieldset {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.85rem;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.feedback-form fieldset legend {
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 0 0.2rem;
+}
+
+.feedback-form__grid {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.feedback-violations h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.feedback-violations ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.6rem 0 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.feedback-violation-item {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.65rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.feedback-violation-item p {
+  margin: 0.35rem 0 0;
+  color: var(--text-muted);
+}
+
+.feedback-violation-item small {
+  color: var(--text-muted);
+}
+
+.feedback-violation-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.feedback-violation-actions label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 500;
+}
+
+.feedback-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.feedback-error {
+  color: var(--error);
+  margin: 0;
+}
+
+.feedback-success {
+  color: var(--success);
+  margin: 0;
+}
+
 .status-timeline {
   margin: 0;
   padding: 0 0 0 1rem;
@@ -273,5 +398,19 @@ a {
   .app-nav__link {
     flex: 1;
     text-align: center;
+  }
+
+  .feedback-check-id-form__controls {
+    grid-template-columns: 1fr;
+  }
+
+  .feedback-form__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .feedback-violation-actions {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
   }
 }
