@@ -21,7 +21,34 @@ dependencies = [
 dev = [
     "pytest>=8.2,<9.0",
     "ruff>=0.5,<1.0",
+    "black>=24.4,<26.0",
+    "mypy>=1.10,<2.0",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["app/tests"]
+markers = [
+    "unit: isolated unit tests",
+    "integration: integration tests",
+    "contract: API contract tests",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["app"]
+pretty = true
+show_error_codes = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+check_untyped_defs = true
+ignore_missing_imports = true
+exclude = ["app/tests", "app/tests/__pycache__"]

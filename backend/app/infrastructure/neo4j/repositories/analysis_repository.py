@@ -52,10 +52,14 @@ def _build_violation(value: dict[str, Any]) -> Violation:
         code=str(value.get("code") or ""),
         message=str(value.get("message") or ""),
         severity=str(value.get("severity") or ""),
-        evidence_json=value.get("evidence") if isinstance(value.get("evidence"), dict) else None,
-        confidence=value.get("confidence")
-        if isinstance(value.get("confidence"), (int, float))
-        else None,
+        evidence_json=(
+            value.get("evidence") if isinstance(value.get("evidence"), dict) else None
+        ),
+        confidence=(
+            value.get("confidence")
+            if isinstance(value.get("confidence"), (int, float))
+            else None
+        ),
     )
 
 
@@ -65,7 +69,9 @@ class Neo4jAnalysisRepository(AnalysisRepository):
     cypher_loader: CypherFileLoader
 
     def find_active_check_for_document(self, *, document_id: str) -> str | None:
-        query = self.cypher_loader.load_query("queries/find_active_check_for_document.cypher")
+        query = self.cypher_loader.load_query(
+            "queries/find_active_check_for_document.cypher"
+        )
         active_statuses = [
             status.value
             for status in AnalysisStatus
@@ -177,7 +183,9 @@ class Neo4jAnalysisRepository(AnalysisRepository):
                 semester=report.semester,
                 rules_json=json.dumps(report.rules, ensure_ascii=True),
                 violations_json=json.dumps(serialized_violations, ensure_ascii=True),
-                recommendations_json=json.dumps(report.recommendations, ensure_ascii=True),
+                recommendations_json=json.dumps(
+                    report.recommendations, ensure_ascii=True
+                ),
                 overall_status=report.overall_status,
             ).consume()
 
@@ -192,7 +200,11 @@ class Neo4jAnalysisRepository(AnalysisRepository):
 
         status = _parse_status(record.get("status"))
         raw_progress = record.get("progress")
-        progress = raw_progress if isinstance(raw_progress, int) else progress_for_status(status)
+        progress = (
+            raw_progress
+            if isinstance(raw_progress, int)
+            else progress_for_status(status)
+        )
         error = record.get("error")
 
         return AnalysisStatusSnapshot(
@@ -216,13 +228,13 @@ class Neo4jAnalysisRepository(AnalysisRepository):
 
         raw_violations = _safe_json_list(record.get("violations_json"))
         violations = [
-            _build_violation(item)
-            for item in raw_violations
-            if isinstance(item, dict)
+            _build_violation(item) for item in raw_violations if isinstance(item, dict)
         ]
 
         raw_recommendations = _safe_json_list(record.get("recommendations_json"))
-        recommendations = [str(item) for item in raw_recommendations if isinstance(item, str)]
+        recommendations = [
+            str(item) for item in raw_recommendations if isinstance(item, str)
+        ]
 
         raw_semester = record.get("semester")
         semester = raw_semester if isinstance(raw_semester, int) else 0
@@ -233,10 +245,14 @@ class Neo4jAnalysisRepository(AnalysisRepository):
         return ReportSnapshot(
             check_id=record["check_id"],
             report_id=record["report_id"],
-            document_type=document_type if isinstance(document_type, str) else "UNKNOWN",
+            document_type=(
+                document_type if isinstance(document_type, str) else "UNKNOWN"
+            ),
             semester=semester,
             rules=rules,
             violations=violations,
             recommendations=recommendations,
-            overall_status=overall_status if isinstance(overall_status, str) else "unknown",
+            overall_status=(
+                overall_status if isinstance(overall_status, str) else "unknown"
+            ),
         )

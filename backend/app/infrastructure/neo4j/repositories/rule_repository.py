@@ -35,7 +35,9 @@ class Neo4jRuleRepository(RuleReadRepository):
         document_type_code: str,
         semester_number: int,
     ) -> list[Requirement]:
-        query = self.cypher_loader.load_query("queries/get_rules_by_type_and_semester.cypher")
+        query = self.cypher_loader.load_query(
+            "queries/get_rules_by_type_and_semester.cypher"
+        )
 
         with self.client.get_session() as session:
             result = session.run(

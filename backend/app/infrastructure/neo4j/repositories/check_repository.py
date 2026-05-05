@@ -31,7 +31,9 @@ class Neo4jCheckRepository(CheckWriteRepository):
                 query,
                 check_id=check.check_id,
                 started_at=check.started_at.isoformat(),
-                finished_at=check.finished_at.isoformat() if check.finished_at else None,
+                finished_at=(
+                    check.finished_at.isoformat() if check.finished_at else None
+                ),
                 status=check.status,
                 document_id=document_id,
                 used_requirement_codes=used_requirement_codes,
@@ -54,7 +56,9 @@ class Neo4jCheckRepository(CheckWriteRepository):
                 "code": violation.code,
                 "message": violation.message,
                 "severity": violation.severity,
-                "evidence_json": json.dumps(violation.evidence_json or {}, ensure_ascii=True),
+                "evidence_json": json.dumps(
+                    violation.evidence_json or {}, ensure_ascii=True
+                ),
                 "confidence": violation.confidence,
                 "requirement_code": violation_requirement_map[violation.violation_id],
             }

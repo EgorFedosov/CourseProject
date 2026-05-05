@@ -6,7 +6,9 @@ from datetime import datetime
 from app.application.ports.ai_assistant import AiSuggestion
 from app.domain.entities.correction_case import CorrectionCase
 from app.domain.entities.requirement import Requirement
-from app.infrastructure.pipeline.deterministic_pipeline import DeterministicAnalysisPipeline
+from app.infrastructure.pipeline.deterministic_pipeline import (
+    DeterministicAnalysisPipeline,
+)
 
 
 @dataclass
@@ -121,5 +123,12 @@ def test_pipeline_falls_back_to_rule_only_defaults_when_ai_missing() -> None:
 
     parsed = pipeline.parse(document_id="doc-xyz")
 
-    assert pipeline.detect_document_type(parsed_document=parsed) == "COURSE_PROJECT_NOTE"
-    assert pipeline.detect_semester(parsed_document=parsed, document_type="COURSE_PROJECT_NOTE") == 4
+    assert (
+        pipeline.detect_document_type(parsed_document=parsed) == "COURSE_PROJECT_NOTE"
+    )
+    assert (
+        pipeline.detect_semester(
+            parsed_document=parsed, document_type="COURSE_PROJECT_NOTE"
+        )
+        == 4
+    )

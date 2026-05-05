@@ -4,7 +4,12 @@ from dataclasses import dataclass
 from typing import Any
 
 import httpx
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from app.core.config import Settings
 from app.infrastructure.ai.exceptions import AiProviderError, AiProviderUnavailableError
@@ -15,7 +20,11 @@ class HttpAiGateway:
     settings: Settings
 
     def complete(self, *, prompt: str) -> str:
-        if not (self.settings.ai_provider and self.settings.ai_api_key and self.settings.ai_model):
+        if not (
+            self.settings.ai_provider
+            and self.settings.ai_api_key
+            and self.settings.ai_model
+        ):
             raise AiProviderUnavailableError("AI configuration is incomplete")
 
         provider = self.settings.ai_provider.lower()
@@ -34,7 +43,9 @@ class HttpAiGateway:
                 multiplier=self.settings.ai_retry_backoff_seconds,
                 max=self.settings.ai_retry_max_backoff_seconds,
             ),
-            retry=retry_if_exception_type((httpx.RequestError, httpx.HTTPStatusError, AiProviderError)),
+            retry=retry_if_exception_type(
+                (httpx.RequestError, httpx.HTTPStatusError, AiProviderError)
+            ),
             reraise=True,
         )
 

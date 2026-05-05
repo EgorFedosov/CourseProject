@@ -86,7 +86,9 @@ class Neo4jFeedbackRepository(FeedbackRepository):
         semester_number: int | None,
         limit: int = 5,
     ) -> list[CorrectionCase]:
-        query = self.cypher_loader.load_query("queries/get_similar_correction_cases.cypher")
+        query = self.cypher_loader.load_query(
+            "queries/get_similar_correction_cases.cypher"
+        )
 
         with self.client.get_session() as session:
             result = session.run(

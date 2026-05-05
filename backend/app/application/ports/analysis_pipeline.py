@@ -22,30 +22,28 @@ class BuiltReport:
 
 
 class AnalysisPipeline(Protocol):
-    def parse(self, *, document_id: str) -> ParsedDocument:
-        ...
+    def parse(self, *, document_id: str) -> ParsedDocument: ...
 
-    def detect_document_type(self, *, parsed_document: ParsedDocument) -> str:
-        ...
+    def detect_document_type(self, *, parsed_document: ParsedDocument) -> str: ...
 
-    def detect_semester(self, *, parsed_document: ParsedDocument, document_type: str) -> int:
-        ...
+    def detect_semester(
+        self, *, parsed_document: ParsedDocument, document_type: str
+    ) -> int: ...
 
-    def select_rules(self, *, document_type: str, semester: int) -> list[Requirement]:
-        ...
+    def select_rules(
+        self, *, document_type: str, semester: int
+    ) -> list[Requirement]: ...
 
     def check_requirements(
         self,
         *,
         parsed_document: ParsedDocument,
         requirements: list[Requirement],
-    ) -> list[Violation]:
-        ...
+    ) -> list[Violation]: ...
 
     def build_report(
         self,
         *,
         requirements: list[Requirement],
         violations: list[Violation],
-    ) -> BuiltReport:
-        ...
+    ) -> BuiltReport: ...

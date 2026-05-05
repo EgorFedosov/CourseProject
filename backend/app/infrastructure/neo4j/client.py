@@ -29,9 +29,21 @@ class Neo4jClient:
     def get_driver(self) -> Driver:
         if self._driver is None:
             self._validate_settings()
+            uri = self.settings.neo4j_uri
+            user = self.settings.neo4j_user
+            password = self.settings.neo4j_password
+            if uri is None or user is None or password is None:
+                raise AppError(
+                    code="NEO4J_CONFIG_ERROR",
+                    message=(
+                        "Neo4j settings are incomplete. "
+                        "Expected NEO4J_URI, NEO4J_USER and NEO4J_PASSWORD."
+                    ),
+                    status_code=500,
+                )
             self._driver = GraphDatabase.driver(
-                self.settings.neo4j_uri,
-                auth=(self.settings.neo4j_user, self.settings.neo4j_password),
+                uri,
+                auth=(user, password),
             )
         return self._driver
 

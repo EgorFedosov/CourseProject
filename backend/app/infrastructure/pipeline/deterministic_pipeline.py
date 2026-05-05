@@ -33,7 +33,9 @@ class DeterministicAnalysisPipeline(AnalysisPipeline):
             },
         )
 
-    def _get_ai_suggestion(self, *, parsed_document: ParsedDocument) -> AiSuggestion | None:
+    def _get_ai_suggestion(
+        self, *, parsed_document: ParsedDocument
+    ) -> AiSuggestion | None:
         if self.ai_assistant is None or self.feedback_repository is None:
             return None
 
@@ -55,7 +57,9 @@ class DeterministicAnalysisPipeline(AnalysisPipeline):
 
         return "COURSE_PROJECT_NOTE"
 
-    def detect_semester(self, *, parsed_document: ParsedDocument, document_type: str) -> int:
+    def detect_semester(
+        self, *, parsed_document: ParsedDocument, document_type: str
+    ) -> int:
         _ = document_type
         suggestion = self._get_ai_suggestion(parsed_document=parsed_document)
         if suggestion is not None:

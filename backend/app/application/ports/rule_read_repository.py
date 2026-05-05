@@ -9,5 +9,4 @@ class RuleReadRepository(Protocol):
         *,
         document_type_code: str,
         semester_number: int,
-    ) -> list[Requirement]:
-        ...
+    ) -> list[Requirement]: ...

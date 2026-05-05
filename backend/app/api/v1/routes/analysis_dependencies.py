@@ -19,10 +19,16 @@ from app.infrastructure.ai.prompt_builder import AiPromptBuilder
 from app.infrastructure.neo4j.cypher import CypherFileLoader
 from app.infrastructure.neo4j.dependencies import get_neo4j_client
 from app.infrastructure.neo4j.graph_initializer import get_neo4j_assets_root
-from app.infrastructure.neo4j.repositories.analysis_repository import Neo4jAnalysisRepository
-from app.infrastructure.neo4j.repositories.feedback_repository import Neo4jFeedbackRepository
+from app.infrastructure.neo4j.repositories.analysis_repository import (
+    Neo4jAnalysisRepository,
+)
+from app.infrastructure.neo4j.repositories.feedback_repository import (
+    Neo4jFeedbackRepository,
+)
 from app.infrastructure.neo4j.repositories.rule_repository import Neo4jRuleRepository
-from app.infrastructure.pipeline.deterministic_pipeline import DeterministicAnalysisPipeline
+from app.infrastructure.pipeline.deterministic_pipeline import (
+    DeterministicAnalysisPipeline,
+)
 
 
 def get_cypher_loader(settings: Settings = Depends(get_settings)) -> CypherFileLoader:
@@ -32,7 +38,9 @@ def get_cypher_loader(settings: Settings = Depends(get_settings)) -> CypherFileL
 def get_analysis_repository(
     cypher_loader: CypherFileLoader = Depends(get_cypher_loader),
 ) -> AnalysisRepository:
-    return Neo4jAnalysisRepository(client=get_neo4j_client(), cypher_loader=cypher_loader)
+    return Neo4jAnalysisRepository(
+        client=get_neo4j_client(), cypher_loader=cypher_loader
+    )
 
 
 def get_rule_repository(
@@ -44,7 +52,9 @@ def get_rule_repository(
 def get_feedback_repository(
     cypher_loader: CypherFileLoader = Depends(get_cypher_loader),
 ) -> FeedbackRepository:
-    return Neo4jFeedbackRepository(client=get_neo4j_client(), cypher_loader=cypher_loader)
+    return Neo4jFeedbackRepository(
+        client=get_neo4j_client(), cypher_loader=cypher_loader
+    )
 
 
 def get_ai_assistant(settings: Settings = Depends(get_settings)) -> AiAssistant | None:

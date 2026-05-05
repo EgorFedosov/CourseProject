@@ -4,7 +4,10 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from app.application.dto.analysis import StartAnalysisRequestDTO, StartAnalysisResponseDTO
+from app.application.dto.analysis import (
+    StartAnalysisRequestDTO,
+    StartAnalysisResponseDTO,
+)
 from app.application.ports.analysis_pipeline import AnalysisPipeline
 from app.application.ports.analysis_repository import AnalysisRepository, ReportSnapshot
 from app.core.errors import AppError
@@ -38,13 +41,17 @@ class StartAnalysisUseCase:
             progress=progress_for_status(AnalysisStatus.ANALYZING),
         )
 
-        return StartAnalysisResponseDTO(check_id=check_id, status=AnalysisStatus.ANALYZING)
+        return StartAnalysisResponseDTO(
+            check_id=check_id, status=AnalysisStatus.ANALYZING
+        )
 
     def run_pipeline(self, *, check_id: str, document_id: str) -> None:
         try:
             parsed_document = self.pipeline.parse(document_id=document_id)
 
-            document_type = self.pipeline.detect_document_type(parsed_document=parsed_document)
+            document_type = self.pipeline.detect_document_type(
+                parsed_document=parsed_document
+            )
             self.repository.update_check_status(
                 check_id=check_id,
                 status=AnalysisStatus.TYPE_DETERMINED,

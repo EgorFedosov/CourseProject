@@ -13,8 +13,7 @@ class CheckWriteRepository(Protocol):
         check: Check,
         document_id: str,
         used_requirement_codes: list[str],
-    ) -> None:
-        ...
+    ) -> None: ...
 
     def save_violations(
         self,
@@ -22,8 +21,6 @@ class CheckWriteRepository(Protocol):
         check_id: str,
         violations: list[Violation],
         violation_requirement_map: Mapping[str, str],
-    ) -> None:
-        ...
+    ) -> None: ...
 
-    def save_report(self, *, report: Report, check_id: str) -> None:
-        ...
+    def save_report(self, *, report: Report, check_id: str) -> None: ...

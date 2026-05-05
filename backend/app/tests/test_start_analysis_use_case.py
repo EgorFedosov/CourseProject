@@ -7,7 +7,11 @@ from datetime import datetime
 import pytest
 
 from app.application.dto.analysis import StartAnalysisRequestDTO
-from app.application.ports.analysis_pipeline import AnalysisPipeline, BuiltReport, ParsedDocument
+from app.application.ports.analysis_pipeline import (
+    AnalysisPipeline,
+    BuiltReport,
+    ParsedDocument,
+)
 from app.application.ports.analysis_repository import (
     AnalysisRepository,
     AnalysisStatusSnapshot,
@@ -97,7 +101,9 @@ class _StablePipeline(AnalysisPipeline):
         _ = parsed_document
         return "COURSE_PROJECT_NOTE"
 
-    def detect_semester(self, *, parsed_document: ParsedDocument, document_type: str) -> int:
+    def detect_semester(
+        self, *, parsed_document: ParsedDocument, document_type: str
+    ) -> int:
         _ = parsed_document
         _ = document_type
         if self.fail_on_semester:
@@ -141,7 +147,9 @@ class _StablePipeline(AnalysisPipeline):
         return BuiltReport(
             overall_status="compliant",
             summary="No requirement violations detected.",
-            recommendations=[requirement.recommendation for requirement in requirements],
+            recommendations=[
+                requirement.recommendation for requirement in requirements
+            ],
         )
 
 
@@ -185,7 +193,9 @@ def test_start_analysis_use_case_runs_full_pipeline() -> None:
 
 
 def test_start_analysis_rejects_duplicate_active_check() -> None:
-    repository = _InMemoryAnalysisRepository(active_checks_by_document={"doc-1": "check-1"})
+    repository = _InMemoryAnalysisRepository(
+        active_checks_by_document={"doc-1": "check-1"}
+    )
     pipeline = _StablePipeline()
     use_case = StartAnalysisUseCase(repository=repository, pipeline=pipeline)
 

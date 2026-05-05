@@ -4,5 +4,4 @@ from app.application.dto.health import ServiceStatus
 
 
 class HealthProbe(Protocol):
-    def check(self) -> ServiceStatus:
-        ...
+    def check(self) -> ServiceStatus: ...

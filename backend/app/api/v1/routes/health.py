@@ -14,8 +14,12 @@ def _has_any_ai_config(settings: Settings) -> bool:
     return any((settings.ai_provider, settings.ai_api_key, settings.ai_model))
 
 
-def get_health_use_case(settings: Settings = Depends(get_settings)) -> GetHealthStatusUseCase:
-    ai_probe = AiConfigHealthProbe(settings=settings) if _has_any_ai_config(settings) else None
+def get_health_use_case(
+    settings: Settings = Depends(get_settings),
+) -> GetHealthStatusUseCase:
+    ai_probe = (
+        AiConfigHealthProbe(settings=settings) if _has_any_ai_config(settings) else None
+    )
 
     return GetHealthStatusUseCase(
         neo4j_probe=Neo4jHealthProbe(client=get_neo4j_client()),

@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import Literal
 from uuid import uuid4
 
 from app.application.dto.feedback import (
@@ -111,7 +112,9 @@ class SubmitFeedbackCorrectionsUseCase:
             predicted_type=report.document_type,
             predicted_semester=report.semester,
             rules=report.rules,
-            violation_ids=[violation["violation_id"] for violation in predicted_violations],
+            violation_ids=[
+                violation["violation_id"] for violation in predicted_violations
+            ],
         )
 
         similar_cases = self.feedback_repository.get_similar_correction_cases(
@@ -121,7 +124,7 @@ class SubmitFeedbackCorrectionsUseCase:
         )
 
         ai_suggestion: AiSuggestionDTO | None = None
-        ai_mode = "RULE_ONLY"
+        ai_mode: Literal["ADAPTED", "RULE_ONLY"] = "RULE_ONLY"
         if self.ai_assistant is not None:
             suggestion = self.ai_assistant.suggest(
                 doc_features=doc_features,

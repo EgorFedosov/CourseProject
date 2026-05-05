@@ -6,6 +6,7 @@ from uuid import uuid4
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.application.dto.error import ErrorResponseDTO
 
@@ -79,7 +80,20 @@ def register_exception_handlers(app: FastAPI) -> None:
         )
 
     @app.exception_handler(HTTPException)
-    async def handle_http_exception(request: Request, exc: HTTPException) -> JSONResponse:
+    async def handle_http_exception(
+        request: Request, exc: HTTPException
+    ) -> JSONResponse:
+        return _build_error_response(
+            request=request,
+            status_code=exc.status_code,
+            code="HTTP_ERROR",
+            message=str(exc.detail),
+        )
+
+    @app.exception_handler(StarletteHTTPException)
+    async def handle_starlette_http_exception(
+        request: Request, exc: StarletteHTTPException
+    ) -> JSONResponse:
         return _build_error_response(
             request=request,
             status_code=exc.status_code,

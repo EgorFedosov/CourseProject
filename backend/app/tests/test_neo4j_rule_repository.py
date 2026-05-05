@@ -48,7 +48,7 @@ def test_rule_repository_loads_active_rules(tmp_path: Path) -> None:
             "title": "Intro",
             "category": "structure",
             "severity": "high",
-            "condition_json": "{\"type\":\"required_section\"}",
+            "condition_json": '{"type":"required_section"}',
             "message_template": "msg",
             "recommendation": "rec",
             "version": "1.0.0",

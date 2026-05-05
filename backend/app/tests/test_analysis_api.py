@@ -112,7 +112,9 @@ def test_start_analysis_endpoint_contract() -> None:
 
 
 def test_analysis_status_endpoint_contract() -> None:
-    app.dependency_overrides[get_analysis_status_use_case] = lambda: _StubStatusUseCase()
+    app.dependency_overrides[get_analysis_status_use_case] = (
+        lambda: _StubStatusUseCase()
+    )
 
     try:
         response = client.get("/api/v1/analyses/check-123")
@@ -149,7 +151,9 @@ def test_report_endpoint_contract() -> None:
 
 
 def test_feedback_corrections_endpoint_contract() -> None:
-    app.dependency_overrides[get_submit_feedback_use_case] = lambda: _StubFeedbackUseCase()
+    app.dependency_overrides[get_submit_feedback_use_case] = (
+        lambda: _StubFeedbackUseCase()
+    )
 
     try:
         response = client.post(

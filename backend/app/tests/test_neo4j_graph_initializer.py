@@ -41,9 +41,13 @@ def _write_file(path: Path, content: str) -> None:
 def test_initializer_runs_schema_and_seeds_in_order(tmp_path: Path) -> None:
     _write_file(tmp_path / "schema/constraints.cypher", "RETURN 'constraints';")
     _write_file(tmp_path / "schema/indexes.cypher", "RETURN 'indexes';")
-    _write_file(tmp_path / "data/seed_document_types.cypher", "RETURN 'seed_doc_types';")
+    _write_file(
+        tmp_path / "data/seed_document_types.cypher", "RETURN 'seed_doc_types';"
+    )
     _write_file(tmp_path / "data/seed_semesters.cypher", "RETURN 'seed_semesters';")
-    _write_file(tmp_path / "data/seed_requirements.cypher", "RETURN 'seed_requirements';")
+    _write_file(
+        tmp_path / "data/seed_requirements.cypher", "RETURN 'seed_requirements';"
+    )
 
     loader = CypherFileLoader(assets_root=tmp_path)
     client = _FakeClient()

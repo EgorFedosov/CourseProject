@@ -22,5 +22,4 @@ class AiAssistant(Protocol):
         *,
         doc_features: dict[str, object],
         similar_cases: list[CorrectionCase],
-    ) -> AiSuggestion | None:
-        ...
+    ) -> AiSuggestion | None: ...
