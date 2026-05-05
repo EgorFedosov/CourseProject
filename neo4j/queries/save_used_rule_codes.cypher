@@ -1,4 +1,4 @@
-﻿MATCH (check:Check {check_id: $check_id})
+MATCH (check:Check {check_id: $check_id})
 OPTIONAL MATCH (check)-[rel:USED_REQUIREMENT]->(:Requirement)
 DELETE rel
 WITH check

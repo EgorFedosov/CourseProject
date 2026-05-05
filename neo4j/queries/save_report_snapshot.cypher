@@ -1,4 +1,4 @@
-﻿MATCH (check:Check {check_id: $check_id})
+MATCH (check:Check {check_id: $check_id})
 MERGE (report:Report {report_id: $report_id})
 SET report.document_type_code = $document_type,
     report.semester_number = $semester,

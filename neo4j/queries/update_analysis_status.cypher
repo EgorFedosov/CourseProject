@@ -1,4 +1,4 @@
-﻿MATCH (check:Check {check_id: $check_id})
+MATCH (check:Check {check_id: $check_id})
 SET check.status = $status,
     check.progress = $progress,
     check.error = $error,

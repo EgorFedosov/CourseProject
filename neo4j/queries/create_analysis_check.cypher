@@ -1,4 +1,4 @@
-﻿MATCH (document:Document {document_id: $document_id})
+MATCH (document:Document {document_id: $document_id})
 MERGE (check:Check {check_id: $check_id})
 ON CREATE SET check.started_at = $started_at
 SET check.requested_by = $requested_by,

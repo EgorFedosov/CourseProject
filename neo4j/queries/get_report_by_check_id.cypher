@@ -1,4 +1,4 @@
-﻿MATCH (check:Check {check_id: $check_id})
+MATCH (check:Check {check_id: $check_id})
 OPTIONAL MATCH (report:Report)-[:FOR_CHECK]->(check)
 RETURN
     check.check_id AS check_id,
