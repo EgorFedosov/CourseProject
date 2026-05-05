@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { ApiClientError } from '../../../shared/api/error'
 import { useReportQuery } from '../../../shared/api/hooks/use-report-query'
 import { PageCard } from '../../../shared/ui/page-card'
+import { StatePanel } from '../../../shared/ui/state-panel'
 import { buildRulesTrace, getUnmappedViolationCodes } from '../model/rules-trace'
 
 const resolveCheckId = (searchParams: URLSearchParams): string => {
@@ -86,37 +87,56 @@ export const RulesInspectorOverview = () => {
         </p>
       </section>
 
-      {reportQuery.error ? <p className="rules-error">{formatError(reportQuery.error, 'Не удалось получить данные отчёта.')}</p> : null}
+      {!activeCheckId && !reportQuery.isFetching ? (
+        <StatePanel tone="empty" title="Ожидание check_id" message="Укажите check_id, чтобы загрузить applied_rules для трассировки." />
+      ) : null}
+
+      {reportQuery.isFetching ? <StatePanel tone="loading" title="Загрузка правил" message="Получаем applied_rules и violations из backend отчёта." /> : null}
+
+      {reportQuery.error ? (
+        <StatePanel
+          tone="error"
+          title="Ошибка загрузки правил"
+          message={formatError(reportQuery.error, 'Не удалось получить данные отчёта.')}
+          actionLabel="Повторить запрос"
+          onAction={() => {
+            void reportQuery.refetch()
+          }}
+        />
+      ) : null}
 
       {reportQuery.data ? (
         <section className="rules-trace" aria-label="Трассировка правил">
           <h2>Трассировка правил</h2>
-          {tracedRules.length === 0 ? <p>Backend вернул пустой список applied_rules для выбранного check_id.</p> : null}
-          <ul>
-            {tracedRules.map((rule) => (
-              <li key={rule.code} className={`rules-trace-item rules-trace-item--${rule.status}`}>
-                <header>
-                  <strong>{rule.code}</strong>
-                  <span>{rule.status === 'violated' ? 'violation found' : 'satisfied'}</span>
-                </header>
-                <p>title: {rule.title}</p>
-                <p>category: {rule.category}</p>
-                <p>severity: {rule.severity}</p>
-                {rule.evidence.length > 0 ? (
-                  <div>
-                    <p>evidence:</p>
-                    <ul>
-                      {rule.evidence.map((message) => (
-                        <li key={`${rule.code}-${message}`}>{message}</li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : (
-                  <p>evidence: not found</p>
-                )}
-              </li>
-            ))}
-          </ul>
+          {tracedRules.length === 0 ? (
+            <StatePanel tone="empty" title="Пустой applied_rules" message="Backend вернул пустой список правил для выбранного check_id." />
+          ) : (
+            <ul>
+              {tracedRules.map((rule) => (
+                <li key={rule.code} className={`rules-trace-item rules-trace-item--${rule.status}`}>
+                  <header>
+                    <strong>{rule.code}</strong>
+                    <span>{rule.status === 'violated' ? 'violation found' : 'satisfied'}</span>
+                  </header>
+                  <p>title: {rule.title}</p>
+                  <p>category: {rule.category}</p>
+                  <p>severity: {rule.severity}</p>
+                  {rule.evidence.length > 0 ? (
+                    <div>
+                      <p>evidence:</p>
+                      <ul>
+                        {rule.evidence.map((message) => (
+                          <li key={`${rule.code}-${message}`}>{message}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
+                    <p>evidence: not found</p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
 
           {unmappedViolations.length > 0 ? (
             <div className="rules-warning">
@@ -129,9 +149,7 @@ export const RulesInspectorOverview = () => {
             </div>
           ) : null}
         </section>
-      ) : (
-        <p>Введите check_id и загрузите отчёт, чтобы увидеть applied_rules и их трассировку.</p>
-      )}
+      ) : null}
     </PageCard>
   )
 }

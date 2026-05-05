@@ -25,6 +25,15 @@ export const HealthStatusBadge = () => {
       <div className="health-badge" aria-live="polite">
         <StatusDot tone="error" />
         <span>Backend status: {error}</span>
+        <button
+          type="button"
+          className="health-badge__retry"
+          onClick={() => {
+            void healthQuery.refetch()
+          }}
+        >
+          Retry
+        </button>
       </div>
     )
   }

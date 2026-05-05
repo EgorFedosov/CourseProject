@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { App } from '../App'
 
@@ -32,5 +32,24 @@ describe('App routing', () => {
     render(<App />)
 
     expect(screen.getByRole('heading', { name: heading })).toBeInTheDocument()
+  })
+
+  it('smoke navigates full chain upload -> analysis -> report -> feedback -> rules', () => {
+    window.history.pushState({}, '', '/upload')
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'UploadPage' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('link', { name: 'Analysis' }))
+    expect(screen.getByRole('heading', { name: 'AnalysisPage' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('link', { name: 'Report' }))
+    expect(screen.getByRole('heading', { name: 'ReportPage' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('link', { name: 'Feedback' }))
+    expect(screen.getByRole('heading', { name: 'FeedbackPage' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('link', { name: 'Rules' }))
+    expect(screen.getByRole('heading', { name: 'RulesViewPage' })).toBeInTheDocument()
   })
 })

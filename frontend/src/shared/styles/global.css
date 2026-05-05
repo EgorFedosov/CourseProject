@@ -92,6 +92,16 @@ a {
   background: var(--error);
 }
 
+.health-badge__retry {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text-muted);
+  padding: 0.2rem 0.45rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
 .app-nav {
   display: flex;
   flex-wrap: wrap;
@@ -163,6 +173,141 @@ a {
   padding: 1rem 1.1rem;
   display: grid;
   gap: 0.9rem;
+}
+
+.state-panel {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.7rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.state-panel strong {
+  font-size: 0.95rem;
+}
+
+.state-panel p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.state-panel button {
+  justify-self: start;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  padding: 0.35rem 0.6rem;
+  cursor: pointer;
+}
+
+.state-panel--loading {
+  background: #f3f8ff;
+  border-color: #9ec3ff;
+}
+
+.state-panel--empty {
+  background: #f7f9fc;
+}
+
+.state-panel--error {
+  background: #fff5f5;
+  border-color: #efb4b4;
+}
+
+.state-panel--success {
+  background: #f0fdf9;
+  border-color: #9fd8cb;
+}
+
+.state-panel__link {
+  justify-self: start;
+  color: var(--brand);
+  font-weight: 600;
+}
+
+.upload-form,
+.analysis-form,
+.report-check-id-form {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.upload-form label,
+.analysis-form label,
+.report-check-id-form label {
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.upload-form input,
+.analysis-form input,
+.report-check-id-form input {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.55rem 0.65rem;
+  font: inherit;
+}
+
+.upload-form button,
+.analysis-form button,
+.report-check-id-form button {
+  justify-self: start;
+  border: 1px solid var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand);
+  border-radius: 10px;
+  padding: 0.55rem 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.upload-form button:disabled,
+.analysis-form button:disabled,
+.report-check-id-form button:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.report-check-id-form__controls {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.report-summary {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.8rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.report-summary h2,
+.report-linked-flows h3 {
+  margin: 0;
+}
+
+.report-summary p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.report-linked-flows {
+  margin-top: 0.4rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.6rem;
+}
+
+.report-linked-flows div {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.report-linked-flows a {
+  color: var(--brand);
+  font-weight: 600;
 }
 
 .feedback-check-id-form {
@@ -597,5 +742,9 @@ a {
   .rules-trace-item header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .report-check-id-form__controls {
+    grid-template-columns: 1fr;
   }
 }

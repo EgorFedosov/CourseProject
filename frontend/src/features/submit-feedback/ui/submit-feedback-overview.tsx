@@ -4,6 +4,7 @@ import { ApiClientError } from '../../../shared/api/error'
 import { useReportQuery } from '../../../shared/api/hooks/use-report-query'
 import { useSubmitFeedbackMutation } from '../../../shared/api/hooks/use-submit-feedback-mutation'
 import { PageCard } from '../../../shared/ui/page-card'
+import { StatePanel } from '../../../shared/ui/state-panel'
 import { buildFeedbackPayload, getUniqueViolationCodes, type ViolationDecisionMap } from '../model/corrections-form'
 
 const resolveCheckId = (searchParams: URLSearchParams): string => {
@@ -139,7 +140,23 @@ export const SubmitFeedbackOverview = () => {
         </div>
       </form>
 
-      {reportQuery.error ? <p className="feedback-error">{formatError(reportQuery.error, 'Не удалось получить отчёт.')}</p> : null}
+      {!activeCheckId && !reportQuery.isFetching ? (
+        <StatePanel tone="empty" title="Ожидание check_id" message="Укажите check_id для загрузки violations и отправки правок." />
+      ) : null}
+
+      {reportQuery.isFetching ? <StatePanel tone="loading" title="Загрузка отчёта" message="Получаем данные нарушений из backend." /> : null}
+
+      {reportQuery.error ? (
+        <StatePanel
+          tone="error"
+          title="Ошибка получения отчёта"
+          message={formatError(reportQuery.error, 'Не удалось получить отчёт.')}
+          actionLabel="Повторить запрос"
+          onAction={() => {
+            void reportQuery.refetch()
+          }}
+        />
+      ) : null}
 
       <form className="feedback-form" onSubmit={handleSubmitFeedback}>
         <fieldset disabled={!reportQuery.data || reportQuery.isFetching}>
@@ -176,7 +193,11 @@ export const SubmitFeedbackOverview = () => {
           <section className="feedback-violations" aria-label="Уточнение нарушений">
             <h2>Нарушения из отчёта</h2>
             {violationCodes.length === 0 ? (
-              <p>В отчёте нет нарушений. Можно отправить только уточнение типа/семестра и комментарий.</p>
+              <StatePanel
+                tone="empty"
+                title="Нарушений нет"
+                message="Можно отправить только уточнение типа/семестра и комментарий преподавателя."
+              />
             ) : (
               <ul>
                 {violationCodes.map((code) => {
@@ -254,8 +275,10 @@ export const SubmitFeedbackOverview = () => {
         </fieldset>
       </form>
 
-      {formError ? <p className="feedback-error">{formError}</p> : null}
-      {submitResult ? <p className="feedback-success">{submitResult}</p> : null}
+      {submitMutation.isPending ? <StatePanel tone="loading" title="Отправка правок" message="Сохраняем teacher corrections в backend." /> : null}
+
+      {formError ? <StatePanel tone="error" title="Ошибка формы" message={formError} /> : null}
+      {submitResult ? <StatePanel tone="success" title="Успешная отправка" message={submitResult} /> : null}
     </PageCard>
   )
 }
