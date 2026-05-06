@@ -1,784 +1,393 @@
-# Интеллектуальная система автоматической проверки студенческих работ
+﻿# Intelligent Document Checker
 
-## 0. Обобщённо (верхний уровень)
+Понятное описание проекта: что это, как работает сейчас, зачем нужен Neo4j, как пользоваться 5 вкладками интерфейса и как устроен код.
 
-Это веб-приложение для автоматической проверки учебных документов (`DOCX`, `PDF`), где ядром является база знаний на `Neo4j`.
+## 1) Что это за система
+
+`Intelligent Document Checker` — это веб-приложение для проверки учебных документов (PDF/DOCX) по формальным требованиям.
 
 Система делает полный цикл:
+1. Принимает файл.
+2. Запускает проверку.
+3. Показывает статус и прогресс.
+4. Отдает отчет по проверке.
+5. Позволяет преподавателю отправить правки.
+6. Сохраняет правки как кейсы, чтобы AI мог использовать их в следующих анализах.
 
-1. Принимает документ от студента или преподавателя.
-2. Извлекает текст и структуру (разделы, заголовки, метаданные).
-3. Определяет тип документа и предполагаемый семестр.
-4. Подбирает из базы знаний нужные требования.
-5. Проверяет документ на соответствие правилам.
-6. Формирует отчёт с нарушениями, критичностью и рекомендациями.
-7. Сохраняет правки преподавателя и использует их в следующих проверках через AI API (без локального обучения модели).
-
-Базовый принцип:  
-**жёсткие требования проверяются детерминированно правилами из БЗ**,  
-**AI используется как вспомогательный слой для нечетких случаев и объяснений**.
+Ключевая идея: нормативные правила хранятся в графовой БД (`Neo4j`), а API и UI работают поверх них.
 
 ---
 
-## 1. Контекст и соответствие `data.md`
+## 2) Важно: текущее состояние реализации
 
-Данный `README` фиксирует реализацию, согласованную с материалами из `data.md` и UML/PNG-диаграмм:
+Чтобы не было ложных ожиданий, это текущий факт по коду:
 
-- `uml/1.puml` — use-case.
-- `uml/2.puml` — ER-представление сущностей.
-- `uml/3.puml` — диаграмма состояний документа.
-- `uml/4.puml` — компонентная диаграмма.
-- `uml/5.puml` — high-level архитектура.
-- `uml/6.puml` — sequence.
-- `png/diagram_01_architecture_high_level.png.png` ... `png/diagram_06_state_diagram.png`.
+1. Пайплайн анализа уже рабочий по API и состояниям (`ANALYZING -> ... -> REPORT_READY`).
+2. Выбор правил из Neo4j уже работает.
+3. Отчеты, статусы, правки преподавателя и сохранение correction cases уже работают.
+4. AI-адаптация подключаемая (через `AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL`) и имеет fallback в `RULE_ONLY`.
+5. Проверка требований в текущем пайплайне пока заглушка: `check_requirements()` возвращает пустой список нарушений.
 
-Ключевые требования из `data.md`, которые обязательно закрывает реализация:
-
-1. Поддержка `PDF/DOCX`.
-2. Классификация документа (тип + семестр).
-3. Выбор правил на основе типа/семестра/контекста.
-4. Проверка структуры и оформления.
-5. Отчёт с нарушениями и рекомендациями.
-6. БЗ как отдельный расширяемый слой.
-7. Графовая модель знаний (`Neo4j`, `Cypher`).
-8. Разделение нормативных знаний и результатов проверки.
-9. Возможность улучшать качество без переобучения локальной модели.
+Из-за пункта 5 сейчас часто получается отчет `compliant` без нарушений. Это не баг UI, а текущий этап backend-логики.
 
 ---
 
-## 2. Цели, границы, роли
+## 3) Технологический стек
 
-## 2.1 Цель
+### Frontend
+- React 18 + TypeScript
+- Vite
+- React Router
+- TanStack Query
+- Axios
+- Zod
+- Vitest + Testing Library
 
-Создать интеллектуальную систему, где основной ценностью является формализованная база знаний для автоматической проверки студенческих работ.
+### Backend
+- Python 3.12
+- FastAPI
+- Pydantic v2
+- Neo4j Python Driver
+- HTTPX + Tenacity (для внешнего AI API)
 
-## 2.2 Границы MVP
-
-В MVP обязательно:
-
-1. Загрузка и хранение `PDF/DOCX`.
-2. Извлечение текста и структуры.
-3. Определение типа документа.
-4. Определение семестра (включая кейс `КП4`/4 семестр).
-5. Проверка обязательных разделов и части правил оформления.
-6. Генерация отчёта.
-7. Сохранение преподавательских правок как `CorrectionCase`.
-8. Подмешивание похожих исправленных кейсов в AI-промпт.
-
-Вне MVP:
-
-1. Полноценный антиплагиат.
-2. Сложный ML pipeline с локальным training.
-3. Полнофункциональный распределённый микросервисный кластер.
-
-## 2.3 Пользовательские роли
-
-1. `Студент`:
-   - загружает документ;
-   - запускает анализ;
-   - смотрит отчёт.
-2. `Преподаватель`:
-   - запускает/перезапускает анализ;
-   - подтверждает и исправляет результат;
-   - формирует итоговую оценку соответствия.
-3. `Администратор/методист`:
-   - редактирует правила в БЗ;
-   - управляет версиями требований.
+### Data / Infra
+- Neo4j для базы знаний и результатов проверки
+- Локальное файловое хранилище для загруженных документов (`backend/storage/documents`)
 
 ---
 
-## 3. Полный стек и библиотеки
+## 4) Ключевые идентификаторы
 
-## 3.1 Frontend (React)
+1. `document_id` — ID загруженного документа.
+2. `check_id` — ID конкретного запуска анализа.
+3. `case_id` — ID кейса правок преподавателя (`CorrectionCase`).
 
-- `React 18 + TypeScript`
-- `Vite`
-- `React Router`
-- `TanStack Query` (серверное состояние)
-- `Zustand` (UI-состояние)
-- `React Hook Form + Zod` (формы и валидация)
-- `Axios` (HTTP-клиент)
-- `MUI` (базовый UI kit)
-- `Vitest + Testing Library` (тесты)
-- `ESLint + Prettier`
-
-## 3.2 Backend (Python)
-
-- `Python 3.12`
-- `FastAPI`
-- `Uvicorn`
-- `Pydantic v2`
-- `python-multipart` (upload)
-- `neo4j` (официальный драйвер)
-- `pdfplumber` + `PyMuPDF` (PDF parsing)
-- `python-docx` (DOCX parsing)
-- `RapidFuzz` (нечеткое сопоставление заголовков и шаблонов)
-- `httpx` (вызов AI API)
-- `tenacity` (retry/timeout/circuit-like обработка внешнего API)
-- `orjson` (быстрый JSON)
-- `pytest + pytest-asyncio + httpx` (тесты)
-- `ruff + black + mypy` (качество кода)
-
-## 3.3 Данные и инфраструктура
-
-- `Neo4j`:
-  - хранение нормативных знаний;
-  - хранение результатов проверок;
-  - хранение `CorrectionCase` для адаптации.
-- Хранилище файлов:
-  - локальная ФС (`storage/documents`, `storage/reports`) для MVP.
-- AI API:
-  - один провайдер на бесплатном тарифе (например, Gemini API на free tier с лимитами).
+Обычно поток такой: сначала получаем `document_id`, потом по нему запускаем анализ и получаем `check_id`, дальше по `check_id` читаем статус/отчет/правила и отправляем правки.
 
 ---
 
-## 4. Архитектура системы
+## 5) Как работает система по шагам
 
-## 4.1 High-level слои
+1. `POST /api/v1/documents/upload`
+- Загружает файл.
+- Сохраняет файл на диск.
+- Создает узел `Document` в Neo4j.
 
-1. `Слой интерфейса` (React SPA).
-2. `Серверный слой` (FastAPI, оркестрация анализа).
-3. `Интеллектуальный контур` (type/semester/rule-check/report).
-4. `Слой БЗ` (`Neo4j`).
-5. `Слой хранения артефактов` (документы/отчёты).
-6. `Слой интеграции AI API`.
+2. `POST /api/v1/analyses/start`
+- Создает `Check` и связывает его с `Document`.
+- Запускает фоновой pipeline.
 
-Это полностью соответствует структуре из `data.md`:
+3. Фоновый pipeline
+- `parse(document_id)`
+- `detect_document_type(...)`
+- `detect_semester(...)`
+- `select_rules(...)`
+- `check_requirements(...)`
+- `build_report(...)`
 
-- загрузка;
-- анализ;
-- определение типа;
-- определение семестра;
-- проверка требований;
-- формирование отчёта;
-- база знаний;
-- хранилище документов и результатов.
+4. `GET /api/v1/analyses/{check_id}`
+- Возвращает текущий статус и прогресс.
 
-## 4.2 Ключевые backend модули
+5. `GET /api/v1/reports/{check_id}`
+- Возвращает итоговый отчет.
 
-1. `UploadService`:
-   - валидирует файл;
-   - присваивает `document_id`;
-   - сохраняет файл в `storage/documents`.
-2. `DocumentParserService`:
-   - извлекает текст, заголовки, структуру, метаданные;
-   - приводит результат к каноническому DTO.
-3. `DocumentTypeService`:
-   - определяет тип документа;
-   - учитывает правила/признаки из Neo4j и AI подсказку.
-4. `SemesterService`:
-   - определяет семестр;
-   - учитывает `КП4`/шаблоны титула/структурные признаки.
-5. `RuleSelectionService`:
-   - выбирает релевантные требования по типу+семестру.
-6. `RequirementCheckService`:
-   - запускает детерминированные проверки;
-   - формирует список нарушений.
-7. `ReportService`:
-   - собирает итоговый отчёт;
-   - выставляет итоговый статус: `соответствует/частично/не соответствует`.
-8. `FeedbackService`:
-   - принимает правки преподавателя;
-   - сохраняет `CorrectionCase` в Neo4j.
-9. `AiAssistantService`:
-   - получает похожие кейсы;
-   - формирует prompt;
-   - вызывает AI API;
-   - возвращает строго структурированный JSON.
-10. `AnalysisOrchestrator`:
-    - координирует весь пайплайн.
+6. `POST /api/v1/feedback/corrections`
+- Сохраняет правки преподавателя как `CorrectionCase`.
+- Опционально вызывает AI-адаптацию и возвращает `ai_mode` (`ADAPTED` или `RULE_ONLY`).
 
----
+### 5.1 Что именно сейчас делает `parse()` (важно)
+На текущем этапе парсинг в `backend/app/infrastructure/pipeline/deterministic_pipeline.py` работает как заглушка.
 
-## 5. Полный сценарий обработки документа
+Технически:
+1. В `parse()` приходит только `document_id`.
+2. `raw_text` формируется как `document_id.lower()`.
+3. `features` строятся из:
+- `document_id`
+- `tokens` = `document_id` разбитый по `-`
+- `length` = длина `document_id`
 
-## 5.1 Основной pipeline
+Что это значит на практике:
+1. Сейчас пайплайн не читает текст содержимого PDF/DOCX.
+2. Табуляция, отступы, шрифты, структура разделов, переносы строк, форматирование не анализируются.
+3. Для PDF и DOCX пока нет раздельного реального разбора содержимого: обе ветки проходят через один stub-парсинг.
 
-1. Пользователь загружает файл.
-2. `UploadService` сохраняет файл и создает карточку документа.
-3. Пользователь запускает анализ.
-4. `AnalysisOrchestrator` запускает парсинг.
-5. После парсинга вызывается `DocumentTypeService`.
-6. Затем вызывается `SemesterService`.
-7. `RuleSelectionService` достает правила из Neo4j.
-8. `RequirementCheckService` проверяет документ.
-9. `ReportService` формирует отчёт.
-10. Результаты сохраняются в Neo4j и в `storage/reports`.
-11. UI получает статус и показывает отчёт.
+Причина, почему так: каркас pipeline и контракты уже есть, а модуль «настоящего» парсинга документа находится в следующем этапе доработки.
 
-## 5.2 Состояния документа (из диаграммы состояний)
+### 5.2 Откуда берутся правила и как они выбираются
+Правила берутся из Neo4j, не из hardcode в frontend/backend-роутах.
 
-1. `NOT_UPLOADED`
-2. `UPLOADED`
-3. `ANALYZING`
-4. `TYPE_DETERMINED`
-5. `SEMESTER_DETERMINED`
-6. `REQUIREMENTS_CHECKED`
-7. `REPORT_READY`
-8. `ERROR`
+Выбор правил делает `select_rules()` -> `RuleReadRepository` -> запрос:
+`neo4j/queries/get_rules_by_type_and_semester.cypher`.
 
-Переходы ошибок:
+Правило попадет в проверку только если одновременно выполняется:
+1. `Requirement.is_active = true`.
+2. Есть связь `(:Requirement)-[:APPLIES_TO_TYPE]->(:DocumentType {code: ...})`.
+3. Есть связь `(:Requirement)-[:APPLIES_TO_SEMESTER]->(:Semester {number: ...})`.
 
-- неподдерживаемый формат;
-- ошибка парсинга;
-- тип/семестр не определён;
-- ошибка проверки требований;
-- ошибка AI API (не критична, пайплайн должен продолжаться по rule-only пути).
+Именно поэтому важны не только поля правила, но и связи в графе.
 
----
+### 5.3 Как сейчас идет сама проверка требований
+Сейчас `check_requirements(parsed_document, requirements)` возвращает пустой список `[]`.
 
-## 6. Модель знаний и данных (Neo4j)
+Следствия:
+1. Нарушения в отчете обычно пустые.
+2. `overall_status` чаще всего `compliant`.
+3. При этом `applied_rules` и `recommendations` формируются из выбранных требований и показываются в отчете.
 
-## 6.1 Принцип разделения знаний
+То есть «правила подбираются корректно», но «логика выявления нарушений по содержимому документа» пока не подключена.
 
-1. `Нормативные знания` (статические):
-   - типы документов;
-   - семестры;
-   - требования;
-   - шаблоны интерпретации.
-2. `Операционные данные` (динамические):
-   - загруженные документы;
-   - проверки;
-   - нарушения;
-   - отчёты;
-   - correction cases.
+### 5.4 Как добавить или изменить правила в БЗ (Neo4j)
+Есть два рабочих способа.
 
-## 6.2 Узлы графа
-
-1. `DocumentType`
-   - `code`, `name`, `description`.
-2. `Semester`
-   - `number`, `title`, `markers_json`.
-3. `Requirement`
-   - `code`, `title`, `category`, `severity`, `condition_json`, `message_template`, `recommendation`, `version`, `is_active`.
-4. `Document`
-   - `document_id`, `filename`, `format`, `sha256`, `uploaded_at`, `author`, `group`, `discipline`.
-5. `Check`
-   - `check_id`, `started_at`, `finished_at`, `status`.
-6. `Violation`
-   - `violation_id`, `code`, `message`, `severity`, `evidence_json`, `confidence`.
-7. `Report`
-   - `report_id`, `overall_status`, `summary`, `generated_at`, `path`.
-8. `CorrectionCase`
-   - `case_id`, `doc_features_json`, `predicted_type`, `final_type`, `predicted_semester`, `final_semester`, `predicted_violations_json`, `final_violations_json`, `teacher_comment`, `created_at`.
-
-## 6.3 Связи графа
-
-1. `(Document)-[:HAS_TYPE]->(DocumentType)`
-2. `(Document)-[:HAS_SEMESTER]->(Semester)`
-3. `(Requirement)-[:APPLIES_TO_TYPE]->(DocumentType)`
-4. `(Requirement)-[:APPLIES_TO_SEMESTER]->(Semester)`
-5. `(Check)-[:FOR_DOCUMENT]->(Document)`
-6. `(Check)-[:USED_REQUIREMENT]->(Requirement)`
-7. `(Check)-[:FOUND]->(Violation)`
-8. `(Violation)-[:VIOLATES]->(Requirement)`
-9. `(Report)-[:FOR_CHECK]->(Check)`
-10. `(CorrectionCase)-[:RELATES_TO_TYPE]->(DocumentType)`
-11. `(CorrectionCase)-[:RELATES_TO_SEMESTER]->(Semester)`
-
-## 6.4 Индексы и ограничения (обязательно)
-
-1. Уникальные ID:
-   - `Document.document_id`
-   - `Requirement.code`
-   - `Check.check_id`
-   - `Report.report_id`
-   - `CorrectionCase.case_id`
-2. Индексы:
-   - `DocumentType.code`
-   - `Semester.number`
-   - `Requirement.is_active`
-   - `Violation.code`
-
----
-
-## 7. Бизнес-правила проверки
-
-## 7.1 Виды знаний (как в `data.md`)
-
-1. Декларативные:
-   - обязательные части документа.
-2. Структурные:
-   - порядок и вложенность разделов.
-3. Процедурные:
-   - условия вида `если X, то нарушение Y`.
-4. Ограничения:
-   - допустимые шрифты, поля, интервалы, объём.
-5. Интерпретационные:
-   - шаблоны сообщений и рекомендаций.
-
-## 7.2 Формат правила в БЗ
-
-Каждое правило хранится как запись:
-
-1. `code` (уникальный идентификатор).
-2. `title` (читаемое название).
-3. `category` (`structure`, `formatting`, `metadata`, `volume`, `references`).
-4. `severity` (`low`, `medium`, `high`, `critical`).
-5. `condition_json` (машинное условие).
-6. `message_template` (текст нарушения).
-7. `recommendation` (как исправить).
-8. `version`.
-9. `is_active`.
-
-## 7.3 Логика итогового статуса
-
-1. `соответствует`:
-   - нет `high/critical`;
-   - количество `medium` ниже порога.
-2. `частично соответствует`:
-   - есть `medium/high`, но нет блокирующих.
-3. `не соответствует`:
-   - есть `critical` или превышены пороги по ключевым требованиям.
-
----
-
-## 8. AI API и “обучение” без локального обучения
-
-## 8.1 Важное определение
-
-В этой архитектуре нет локального переобучения весов модели.  
-Используется **адаптация через память исправленных кейсов**:
-
-1. Сохраняем исправления преподавателя в граф.
-2. Достаём похожие кейсы.
-3. Передаём их в prompt.
-4. Получаем более точный ответ AI.
-
-Это API-only подход без затрат на серверы/тренировку.
-
-## 8.2 Где AI реально используется
-
-1. Подсказка типа документа в нечетких случаях.
-2. Подсказка семестра при неоднозначной структуре.
-3. Генерация объяснения “почему это нарушение”.
-4. Нормализация текста рекомендаций.
-
-## 8.3 Где AI не используется
-
-1. Детерминированная проверка обязательных правил.
-2. Вычисление итогового статуса соответствия.
-3. Применение критичных нормативов.
-
-## 8.4 Алгоритм адаптации через `CorrectionCase`
-
-1. После отчёта преподаватель отправляет правки.
-2. Backend создает `CorrectionCase`.
-3. Для нового документа:
-   - рассчитываются признаки (`doc_features_json`);
-   - ищутся похожие `CorrectionCase` (top-k, обычно `k=5`);
-   - кейсы добавляются в prompt как few-shot память.
-4. Ответ AI объединяется с rule-engine результатом.
-
-## 8.5 Пример признаков документа
-
-1. наличие ключей (`КП4`, `пояснительная записка`, и т.д.);
-2. список разделов в порядке;
-3. количество страниц;
-4. наличие обязательных блоков;
-5. метаданные титула.
-
-## 8.6 Контракт ответа AI
-
-AI обязан вернуть JSON:
-
-```json
-{
-  "predicted_type": "COURSE_PROJECT_NOTE",
-  "type_confidence": 0.87,
-  "predicted_semester": 4,
-  "semester_confidence": 0.91,
-  "explanations": [
-    "Обнаружен маркер КП4 на титульном листе"
-  ],
-  "risk_flags": []
-}
+Способ A: через seed-файл (рекомендуется для репозитория)
+1. Откройте `neo4j/data/seed_requirements.cypher`.
+2. Добавьте/обновите `MERGE (r:Requirement {code: ...})` с нужными полями:
+- `title`
+- `category`
+- `severity`
+- `condition_json`
+- `message_template`
+- `recommendation`
+- `version`
+- `is_active`
+3. Добавьте связи правила к типу документа и семестру:
+- `MERGE (r)-[:APPLIES_TO_TYPE]->(type)`
+- `MERGE (r)-[:APPLIES_TO_SEMESTER]->(semester)`
+4. Примените изменения:
+- либо перезапустите backend с `NEO4J_INIT_ON_STARTUP=true`,
+- либо вручную выполните:
+```bash
+cd backend
+python -m app.infrastructure.neo4j.init_graph
 ```
 
----
+Способ B: вручную через Neo4j Browser
+Можно выполнить Cypher напрямую в БД. Пример:
+```cypher
+MERGE (r:Requirement {code: "REQ-EXAMPLE-001"})
+SET r.title = "Example requirement",
+    r.category = "structure",
+    r.severity = "high",
+    r.condition_json = "{\"type\":\"required_section\",\"section\":\"abstract\"}",
+    r.message_template = "Document must contain an abstract section.",
+    r.recommendation = "Add abstract section before introduction.",
+    r.version = "1.0.0",
+    r.is_active = true
 
-## 9. API backend (контракт)
+WITH r
+MATCH (dt:DocumentType {code: "COURSE_PROJECT_NOTE"})
+MATCH (s:Semester {number: 4})
+MERGE (r)-[:APPLIES_TO_TYPE]->(dt)
+MERGE (r)-[:APPLIES_TO_SEMESTER]->(s);
+```
 
-Префикс: `/api/v1`
+### 5.5 Как выключить правило без удаления
+Лучше не удалять правило, а деактивировать:
+```cypher
+MATCH (r:Requirement {code: "REQ-EXAMPLE-001"})
+SET r.is_active = false;
+```
+После этого правило перестанет участвовать в выборке.
 
-## 9.1 Upload
-
-`POST /documents/upload`
-
-- `multipart/form-data`, поле `file`.
-- Ответ:
-  - `document_id`
-  - `filename`
-  - `format`
-  - `status=UPLOADED`
-
-## 9.2 Start analysis
-
-`POST /analyses/start`
-
-- Тело:
-  - `document_id`
-  - `requested_by`
-- Ответ:
-  - `check_id`
-  - `status=ANALYZING`
-
-## 9.3 Analysis status
-
-`GET /analyses/{check_id}`
-
-- Возвращает:
-  - текущий статус;
-  - прогресс;
-  - ошибки (если есть).
-
-## 9.4 Report
-
-`GET /reports/{check_id}`
-
-- Возвращает структуру отчёта:
-  - определённый тип;
-  - определённый семестр;
-  - применённые правила;
-  - нарушения;
-  - рекомендации;
-  - итог.
-
-## 9.5 Feedback (исправления преподавателя)
-
-`POST /feedback/corrections`
-
-- Тело:
-  - `check_id`
-  - `final_type`
-  - `final_semester`
-  - `confirmed_violations`
-  - `rejected_violations`
-  - `teacher_comment`
-- Эффект:
-  - создаётся `CorrectionCase`;
-  - увеличивается качество последующих подсказок AI.
-
-## 9.6 Health
-
-`GET /health`
-
-- проверяет:
-  - API alive;
-  - доступность Neo4j;
-  - доступность AI API (опционально).
+### 5.6 Что важно проверить после изменения правил
+1. Новое правило видно в `GET /reports/{check_id}` в `applied_rules`.
+2. На вкладке `Правила` оно отображается в списке.
+3. Если правило не видно, обычно проблема в одной из трех причин:
+- `is_active = false`
+- нет связи к нужному `DocumentType`
+- нет связи к нужному `Semester`
 
 ---
 
-## 10. Frontend архитектура (React)
+## 6) Статусы анализа и прогресс
 
-## 10.1 Страницы
+Backend использует статусы:
 
-1. `UploadPage`
-2. `AnalysisPage` (статусы и прогресс)
-3. `ReportPage` (итог + нарушения)
-4. `FeedbackPage` (правки преподавателя)
-5. `RulesViewPage` (просмотр применённых правил)
+1. `ANALYZING` (10%)
+2. `TYPE_DETERMINED` (35%)
+3. `SEMESTER_DETERMINED` (55%)
+4. `REQUIREMENTS_CHECKED` (85%)
+5. `REPORT_READY` (100%)
+6. `ERROR` (100%)
 
-## 10.2 Feature-модули
-
-1. `features/upload-document`
-2. `features/start-analysis`
-3. `features/analysis-status`
-4. `features/report-view`
-5. `features/submit-feedback`
-6. `features/rules-inspector`
-
-## 10.3 Принципы фронтенда
-
-1. Компоненты без бизнес-логики.
-2. Бизнес-логика в хуках и service-слое.
-3. API-схемы типизированы через `zod` + TS-интерфейсы.
-4. UI состояние и серверное состояние разделены.
+Frontend на вкладке «Анализ» опрашивает статус в реальном времени (polling) и показывает прогресс автоматически.
 
 ---
 
-## 11. Целевая структура репозитория
+## 7) API (краткий справочник)
+
+Префикс всех endpoint: `/api/v1`
+
+1. `GET /health`
+- Проверка доступности API/Neo4j/AI.
+- Ответ: `api_status`, `neo4j_status`, `ai_status`.
+
+2. `POST /documents/upload`
+- Multipart с полем `file`.
+- Ответ: `document_id`, `filename`, `format`, `status=UPLOADED`.
+
+3. `POST /analyses/start`
+- Тело: `document_id`, `requested_by`.
+- Ответ: `check_id`, `status`.
+
+4. `GET /analyses/{check_id}`
+- Ответ: `check_id`, `status`, `progress`, `error`.
+
+5. `GET /reports/{check_id}`
+- Ответ: `overall_status`, `determined_type`, `determined_semester`, `applied_rules`, `violations`, `recommendations`, `summary`.
+- Если отчет еще не готов: `409 REPORT_NOT_READY`.
+
+6. `POST /feedback/corrections`
+- Тело: `check_id`, `final_type`, `final_semester`, `confirmed_violations`, `rejected_violations`, `teacher_comment`.
+- Ответ: `case_id`, `status=SAVED`, `ai_mode`, `ai_suggestion` (опционально).
+
+### Формат ошибок
+Все ошибки приводятся к единому виду:
+- `code`
+- `message`
+- `details`
+- `trace_id`
+
+Также используется заголовок `X-Trace-Id`.
+
+---
+
+## 8) Зачем здесь Neo4j и что в нее пишется
+
+### Почему графовая БД
+Neo4j выбрана потому что в проекте много связей:
+- правило относится к типу документа,
+- правило относится к семестру,
+- проверка использует набор правил,
+- отчет принадлежит проверке,
+- correction case связан с типом/семестром.
+
+Такие связи в графе проще хранить и обходить, чем в разрозненных таблицах.
+
+### Что хранится в Neo4j
+
+Нормативные данные:
+1. `DocumentType`
+2. `Semester`
+3. `Requirement`
+
+Операционные данные:
+1. `Document`
+2. `Check`
+3. `Report`
+4. `CorrectionCase`
+
+Ключевые связи:
+1. `Requirement -[:APPLIES_TO_TYPE]-> DocumentType`
+2. `Requirement -[:APPLIES_TO_SEMESTER]-> Semester`
+3. `Check -[:FOR_DOCUMENT]-> Document`
+4. `Check -[:USED_REQUIREMENT]-> Requirement`
+5. `Report -[:FOR_CHECK]-> Check`
+6. `CorrectionCase -[:RELATES_TO_TYPE]-> DocumentType` (если найден)
+7. `CorrectionCase -[:RELATES_TO_SEMESTER]-> Semester` (если найден)
+
+---
+
+## 9) Интерфейс: 5 вкладок и зачем каждая
+
+В верхней навигации ровно 5 вкладок:
+
+1. `Загрузить` (`/upload`)
+- Выбор PDF/DOCX.
+- Отправка файла на backend.
+- Получение `document_id`.
+- Переход к анализу.
+
+2. `Анализ` (`/analysis`)
+- Запуск проверки (`document_id`, `requested_by`).
+- Отслеживание этапов и процента готовности.
+- Переход к отчету после `REPORT_READY`.
+
+3. `Отчёт` (`/report`)
+- Просмотр сводки проверки по `check_id`.
+- Тип документа, семестр, число правил, нарушения, рекомендации.
+- Переход к правкам и правилам.
+
+4. `Правки` (`/feedback`)
+- Загрузка отчета по `check_id`.
+- Подтверждение/отклонение нарушений.
+- Коррекция типа/семестра.
+- Отправка teacher feedback.
+
+5. `Правила` (`/rules`)
+- Показывает примененные правила и их статус.
+- Показывает, по каким правилам есть evidence нарушений.
+- Удобно для аудита отчета.
+
+---
+
+## 10) Архитектура проекта по папкам
 
 ```text
 CourseProject/
-  README.md
-  data.md
-  uml/
-    1.puml
-    2.puml
-    3.puml
-    4.puml
-    5.puml
-    6.puml
-  png/
-    diagram_01_architecture_high_level.png.png
-    diagram_02_use_case.png
-    diagram_03_sequence_diagram.png
-    diagram_04_component_diagram.png
-    diagram_05_er_model.png
-    diagram_06_state_diagram.png
   backend/
     app/
-      main.py
-      api/
-        v1/
-          routes/
-            health.py
-            documents.py
-            analyses.py
-            reports.py
-            feedback.py
-      core/
-        config.py
-        logging.py
-        errors.py
-      domain/
-        entities/
-        value_objects/
-        services/
-        repositories/
+      api/v1/routes/            # HTTP-роуты FastAPI
       application/
-        dto/
-        use_cases/
-        ports/
+        dto/                    # контракты данных
+        ports/                  # интерфейсы зависимостей
+        use_cases/              # бизнес-сценарии
+      domain/
+        entities/               # сущности предметной области
+        value_objects/          # статусы и VO
       infrastructure/
-        neo4j/
-          client.py
-          repositories/
-        ai/
-          gateway.py
-          prompt_builder.py
-        parsers/
-          docx_parser.py
-          pdf_parser.py
-        storage/
-          file_storage.py
-        reporting/
-          report_builder.py
-      tests/
-    pyproject.toml
+        ai/                     # интеграция с AI провайдером
+        neo4j/                  # клиент, репозитории, инициализация графа
+        pipeline/               # реализация пайплайна анализа
+        storage/                # локальное файловое хранилище
+      core/                     # конфиг, логирование, ошибки
+    storage/documents/          # физические загруженные файлы
+
   frontend/
     src/
-      app/
-      pages/
-      features/
-      entities/
-      shared/
-    package.json
-    vite.config.ts
+      app/                      # роутер, shell, providers
+      pages/                    # страницы (5 вкладок)
+      features/                 # фичи вкладок
+      shared/api/               # typed API-клиент, контракты, hooks
+      shared/ui/                # переиспользуемые UI-компоненты
+
   neo4j/
-    schema/
-      constraints.cypher
-      indexes.cypher
-    data/
-      seed_document_types.cypher
-      seed_semesters.cypher
-      seed_requirements.cypher
-    queries/
-      get_rules_by_type_and_semester.cypher
-      save_check.cypher
-      save_violations.cypher
-      save_report.cypher
-      get_similar_correction_cases.cypher
-    import/
+    schema/                     # constraints + indexes
+    data/                       # seed-данные
+    queries/                    # cypher-запросы репозиториев
 ```
 
 ---
 
-## 12. SOLID, GRASP, Clean Architecture
+## 11) Как запустить локально
 
-## 12.1 SOLID
+### Шаг 1. Neo4j
+В репозитории нет `docker-compose.yml`, поэтому Neo4j можно поднять любым способом:
 
-1. `SRP`:
-   - парсер, классификатор, валидатор, репортер разнесены.
-2. `OCP`:
-   - новые правила/проверки добавляются через новые классы и записи БЗ без переписывания ядра.
-3. `LSP`:
-   - `PdfParser` и `DocxParser` взаимозаменяемы через общий интерфейс `DocumentParser`.
-4. `ISP`:
-   - отдельные интерфейсы: `RuleReadRepository`, `CheckWriteRepository`, `FeedbackRepository`.
-5. `DIP`:
-   - use cases зависят от портов (интерфейсов), а не от конкретного Neo4j/AI клиента.
+1. Neo4j Desktop / Aura
+2. или Docker вручную, например:
 
-## 12.2 GRASP
-
-1. `Controller`:
-   - REST route вызывает соответствующий use case.
-2. `Information Expert`:
-   - `RequirementCheckService` отвечает за применение правил, потому что владеет контекстом проверок.
-3. `Low Coupling`:
-   - AI сервис изолирован через `AiGateway`.
-4. `High Cohesion`:
-   - один модуль = одна зона ответственности.
-5. `Pure Fabrication`:
-   - `PromptBuilder` как отдельный технический класс.
-6. `Protected Variations`:
-   - провайдер AI можно заменить, не меняя бизнес-слой.
-
-## 12.3 Чистый код
-
-1. Имена доменных сущностей совпадают с предметной областью.
-2. Никакой бизнес-логики в контроллерах.
-3. Никаких магических строк; только enum/константы.
-4. Явные DTO между слоями.
-5. 100% typed публичные функции backend/frontend.
-
----
-
-## 13. Нефункциональные требования
-
-1. Производительность:
-   - MVP-анализ документа до ~3 МБ: до 20–40 сек.
-2. Надежность:
-   - при недоступности AI API система не падает, переходит в rule-only режим.
-3. Согласованность:
-   - все статусы проверки фиксируются атомарно.
-4. Расширяемость:
-   - новые типы документов/семестры/правила добавляются через БЗ.
-5. Поддерживаемость:
-   - линтеры, тесты, единые coding standards.
-
----
-
-## 14. Безопасность и работа с данными
-
-1. Ограничение размеров/форматов файлов.
-2. Проверка MIME и расширения.
-3. Санитизация имен файлов.
-4. Исключение выполнения загружаемого контента.
-5. Секреты только через env.
-6. Логи без чувствительных данных.
-7. Для AI API отправлять не полный документ, а минимальный набор признаков и релевантные фрагменты.
-
----
-
-## 15. Тестирование
-
-## 15.1 Backend
-
-1. Unit:
-   - парсеры;
-   - определение типа/семестра;
-   - rule engine;
-   - report builder.
-2. Integration:
-   - FastAPI + Neo4j test graph.
-3. Contract tests:
-   - проверка JSON-контрактов ответов API.
-
-## 15.2 Frontend
-
-1. Unit:
-   - утилиты, hooks.
-2. Component:
-   - формы upload/feedback.
-3. E2E (по возможности):
-   - upload -> analysis -> report -> feedback.
-
-## 15.3 Набор тестовых документов
-
-1. Корректный `КП4`.
-2. Документ без введения.
-3. Документ без заключения.
-4. Документ с нарушением структуры.
-5. Неподдерживаемый формат.
-
----
-
-## 16. Пошаговый план реализации
-
-## Этап 1. Каркас проекта
-
-1. Создать `backend/`, `frontend/`, `neo4j/`.
-2. Поднять базовый FastAPI и React.
-3. Подключить Neo4j и health-check.
-
-## Этап 2. База знаний
-
-1. Создать схему, ограничения, индексы.
-2. Заполнить seed-данные типов/семестров/правил.
-3. Реализовать репозитории чтения/записи.
-
-## Этап 3. Базовый pipeline
-
-1. Upload + хранение документа.
-2. Парсинг PDF/DOCX.
-3. Определение типа/семестра.
-4. Rule-check.
-5. Формирование отчёта.
-
-## Этап 4. Frontend UX
-
-1. Страницы upload/analysis/report.
-2. Статусы обработки и обработка ошибок.
-
-## Этап 5. AI адаптация
-
-1. Интеграция с одним AI API.
-2. `CorrectionCase` и retrieval похожих кейсов.
-3. Prompt builder + строгий JSON output parser.
-
-## Этап 6. Качество
-
-1. Тесты.
-2. Линтеры.
-3. Документация API и эксплуатационные инструкции.
-
----
-
-## 17. Definition of Done
-
-Проект считается готовым, когда:
-
-1. Анализирует `DOCX` и `PDF`.
-2. Определяет тип и семестр.
-3. Проверяет обязательные требования из БЗ.
-4. Формирует детальный отчёт.
-5. Позволяет преподавателю отправить правки.
-6. Использует правки в следующих анализах через few-shot память.
-7. Содержит тесты ключевых сценариев.
-8. Проходит линтеры и статическую типизацию.
-
----
-
-## 18. Переменные окружения
-
-```env
-APP_ENV=dev
-APP_HOST=0.0.0.0
-APP_PORT=8000
-
-NEO4J_URI=bolt://localhost:7687
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=your_password
-
-FILE_STORAGE_PATH=./storage/documents
-REPORT_STORAGE_PATH=./storage/reports
-MAX_UPLOAD_MB=20
-
-AI_PROVIDER=gemini
-AI_API_KEY=your_api_key
-AI_MODEL=your_free_tier_model_name
-AI_TIMEOUT_SECONDS=30
-AI_MAX_RETRIES=2
+```bash
+docker run --name neo4j-courseproject \
+  -p 7474:7474 -p 7687:7687 \
+  -e NEO4J_AUTH=neo4j/your_password \
+  -d neo4j:5
 ```
 
----
-
-## 19. Команды запуска (локально)
-
-## Backend
+### Шаг 2. Backend
 
 ```bash
 cd backend
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
+copy .env.example .env
 uvicorn app.main:app --reload
 ```
 
-## Frontend
+Проверьте `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD` в `.env`.
+
+### Шаг 3. Frontend
 
 ```bash
 cd frontend
@@ -786,31 +395,55 @@ npm install
 npm run dev
 ```
 
-## Neo4j (варианты)
-
-1. Локально через Desktop/Server.
-2. Neo4j Aura Free (без локальной установки БД).
+По умолчанию frontend проксирует `/api` на `http://127.0.0.1:8000`.
 
 ---
 
-## 20. Что важно не нарушать при реализации
+## 12) Что чаще всего сбивает с толку
 
-1. Не смешивать бизнес-логику и инфраструктуру.
-2. Не хардкодить правила в коде, хранить их в БЗ.
-3. Не полагаться на AI в критичных проверках.
-4. Не хранить чувствительные данные в логах.
-5. Не ломать контракты API между frontend и backend.
+1. Почему отчет «чистый», даже если документ явно плохой?
+- Потому что текущий `check_requirements()` пока не генерирует нарушения (заглушка).
+
+2. Почему `GET /reports/{check_id}` иногда дает ошибку?
+- Если pipeline не дошел до `REPORT_READY`, backend вернет `409 REPORT_NOT_READY`.
+
+3. Почему health показывает проблемы с Neo4j?
+- Нет конфигурации или нет подключения к `bolt://...`.
+
+4. AI обязателен?
+- Нет. Без AI система работает в `RULE_ONLY` режиме.
 
 ---
 
-## 21. Результат
+## 13) Куда смотреть в коде в первую очередь
 
-Этот документ является полноценным blueprint для реализации системы из `data.md` с учетом выбранного стека `React + Python + Neo4j + AI API`.
+Если хотите быстро понять проект, начните с этих файлов:
 
-После сборки по данному плану команда получает:
+Backend:
+1. `backend/app/main.py`
+2. `backend/app/api/v1/routes/*.py`
+3. `backend/app/application/use_cases/start_analysis.py`
+4. `backend/app/infrastructure/pipeline/deterministic_pipeline.py`
+5. `backend/app/infrastructure/neo4j/repositories/*.py`
 
-1. Управляемую базу знаний.
-2. Прозрачный и воспроизводимый процесс проверки.
-3. Масштабируемую архитектуру без дорогой инфраструктуры.
-4. Улучшаемое качество ответов за счет `CorrectionCase` без локального обучения модели.
+Frontend:
+1. `frontend/src/app/router/app-router.tsx`
+2. `frontend/src/entities/navigation/model/navigation-routes.ts`
+3. `frontend/src/features/upload-document/ui/upload-document-overview.tsx`
+4. `frontend/src/features/start-analysis/ui/start-analysis-overview.tsx`
+5. `frontend/src/features/report-view/ui/report-view-overview.tsx`
+6. `frontend/src/features/submit-feedback/ui/submit-feedback-overview.tsx`
+7. `frontend/src/features/rules-inspector/ui/rules-inspector-overview.tsx`
 
+Neo4j:
+1. `neo4j/schema/*`
+2. `neo4j/data/*`
+3. `neo4j/queries/*`
+
+---
+
+## 14) Резюме
+
+Система уже даёт сквозной сценарий `upload -> analysis -> report -> feedback -> rules` с сохранением данных в Neo4j и понятным UI.
+
+Главное ограничение на текущий момент: модуль фактической проверки требований в pipeline пока упрощен, поэтому качество самих нарушений/рекомендаций зависит от следующего этапа доработки rule engine.

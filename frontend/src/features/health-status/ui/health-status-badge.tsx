@@ -1,6 +1,4 @@
 ﻿import { useHealthQuery } from '../../../shared/api'
-import { ApiClientError } from '../../../shared/api/error'
-import { resolveHealthTone } from '../model/health-status-tone'
 
 const StatusDot = ({ tone }: { tone: 'success' | 'warning' | 'error' }) => {
   return <span className={`health-dot health-dot--${tone}`} aria-hidden="true" />
@@ -52,3 +50,4 @@ export const HealthStatusBadge = () => {
     </div>
   )
 }
+

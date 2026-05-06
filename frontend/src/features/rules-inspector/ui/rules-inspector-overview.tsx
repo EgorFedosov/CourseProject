@@ -1,5 +1,6 @@
-﻿import { type FormEvent, useState } from 'react'
+﻿import { type FormEvent, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { useTabsState } from '../../../app/providers/tabs-state-provider'
 import { ApiClientError } from '../../../shared/api/error'
 import { useReportQuery } from '../../../shared/api/hooks/use-report-query'
 import { PageCard } from '../../../shared/ui/page-card'
@@ -24,15 +25,44 @@ const formatError = (error: unknown, fallbackMessage: string): string => {
 
 export const RulesInspectorOverview = () => {
   const [searchParams, setSearchParams] = useSearchParams()
-  const [checkIdInput, setCheckIdInput] = useState(() => resolveCheckId(searchParams))
-  const [activeCheckId, setActiveCheckId] = useState<string | null>(() => {
-    const initialCheckId = resolveCheckId(searchParams)
-    return initialCheckId.length > 0 ? initialCheckId : null
-  })
+  const {
+    rules,
+    setRules,
+    lastCheckId,
+    setLastCheckId,
+  } = useTabsState()
+  const { checkIdInput, activeCheckId } = rules
 
   const reportQuery = useReportQuery(activeCheckId)
   const tracedRules = buildRulesTrace(reportQuery.data)
   const unmappedViolations = getUnmappedViolationCodes(reportQuery.data)
+
+  useEffect(() => {
+    const restoredCheckId = resolveCheckId(searchParams)
+
+    setRules((current) => {
+      let changed = false
+      let next = current
+
+      if (current.checkIdInput.trim().length === 0) {
+        const fallbackInput = restoredCheckId || lastCheckId || ''
+        if (fallbackInput.length > 0) {
+          next = { ...next, checkIdInput: fallbackInput }
+          changed = true
+        }
+      }
+
+      if (!current.activeCheckId) {
+        const fallbackCheckId = restoredCheckId || lastCheckId
+        if (fallbackCheckId) {
+          next = { ...next, activeCheckId: fallbackCheckId }
+          changed = true
+        }
+      }
+
+      return changed ? next : current
+    })
+  }, [lastCheckId, searchParams, setRules])
 
   const handleLoadRules = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -42,7 +72,12 @@ export const RulesInspectorOverview = () => {
       return
     }
 
-    setActiveCheckId(normalizedCheckId)
+    setRules((current) => ({
+      ...current,
+      checkIdInput: normalizedCheckId,
+      activeCheckId: normalizedCheckId,
+    }))
+    setLastCheckId(normalizedCheckId)
     setSearchParams({ check_id: normalizedCheckId })
   }
 
@@ -58,7 +93,7 @@ export const RulesInspectorOverview = () => {
             name="check_id"
             type="text"
             value={checkIdInput}
-            onChange={(event) => setCheckIdInput(event.target.value)}
+            onChange={(event) => setRules((current) => ({ ...current, checkIdInput: event.target.value }))}
             placeholder="Введите ID проверки"
             autoComplete="off"
           />
@@ -143,3 +178,4 @@ export const RulesInspectorOverview = () => {
     </PageCard>
   )
 }
+

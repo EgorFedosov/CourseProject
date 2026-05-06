@@ -3,9 +3,9 @@
 const ruleSchema = z
   .object({
     code: z.string().min(1),
-    title: z.string().min(1).optional(),
-    category: z.string().min(1).optional(),
-    severity: z.string().min(1).optional(),
+    title: z.string().min(1).nullable().optional(),
+    category: z.string().min(1).nullable().optional(),
+    severity: z.string().min(1).nullable().optional(),
   })
   .passthrough()
 
@@ -37,7 +37,7 @@ export const reportResponseSchema = z
     applied_rules: z.array(ruleSchema),
     violations: z.array(violationSchema),
     recommendations: z.array(recommendationSchema),
-    summary: z.string().min(1).optional(),
+    summary: z.string().min(1).nullable().optional(),
   })
   .passthrough()
 

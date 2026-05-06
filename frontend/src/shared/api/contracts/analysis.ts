@@ -17,7 +17,7 @@ export const analysisStatusResponseSchema = z
   .object({
     status: pipelineStatusSchema,
     progress: z.number().min(0).max(100).optional(),
-    error: z.string().min(1).optional(),
+    error: z.string().min(1).nullable().optional(),
   })
   .passthrough()
 
