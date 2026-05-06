@@ -33,12 +33,12 @@ export const buildFeedbackPayload = (
 ): FeedbackPayloadResult => {
   const checkId = draft.checkId.trim()
   if (checkId.length === 0) {
-    return { success: false, message: 'Specify check_id before submitting corrections.' }
+    return { success: false, message: 'Укажите идентификатор проверки перед отправкой правок.' }
   }
 
   const semester = Number(draft.finalSemester)
   if (!Number.isInteger(semester) || semester <= 0) {
-    return { success: false, message: 'final_semester must be a positive integer.' }
+    return { success: false, message: 'Семестр должен быть положительным целым числом.' }
   }
 
   const violationCodes = getUniqueViolationCodes(report)
@@ -67,7 +67,7 @@ export const buildFeedbackPayload = (
   })
 
   if (!parsedPayload.success) {
-    return { success: false, message: 'Form failed backend contract validation.' }
+    return { success: false, message: 'Данные формы не прошли проверку.' }
   }
 
   return {

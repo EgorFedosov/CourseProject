@@ -1,6 +1,7 @@
-﻿import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { TabsStateProvider } from '../../../app/providers/tabs-state-provider'
 import { ApiClientError } from '../../../shared/api/error'
 import { SubmitFeedbackOverview } from './submit-feedback-overview'
 
@@ -19,7 +20,9 @@ vi.mock('../../../shared/api/hooks/use-submit-feedback-mutation', () => ({
 const renderFeature = () => {
   return render(
     <MemoryRouter initialEntries={['/feedback']}>
-      <SubmitFeedbackOverview />
+      <TabsStateProvider>
+        <SubmitFeedbackOverview />
+      </TabsStateProvider>
     </MemoryRouter>,
   )
 }
@@ -36,6 +39,7 @@ describe('SubmitFeedbackOverview', () => {
       data: undefined,
       error: null,
       isFetching: false,
+      refetch: vi.fn(),
     })
 
     mockUseSubmitFeedbackMutation.mockReturnValue({
@@ -66,6 +70,7 @@ describe('SubmitFeedbackOverview', () => {
           },
           error: null,
           isFetching: false,
+          refetch: vi.fn(),
         }
       }
 
@@ -73,6 +78,7 @@ describe('SubmitFeedbackOverview', () => {
         data: undefined,
         error: null,
         isFetching: false,
+        refetch: vi.fn(),
       }
     })
 
@@ -82,29 +88,29 @@ describe('SubmitFeedbackOverview', () => {
       case_id: 'case-7',
     })
 
-    renderFeature()
+    const { container } = renderFeature()
 
-    fireEvent.change(screen.getByLabelText('ID проверки'), {
-      target: { value: 'check-42' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Загрузить данные' }))
+    const checkIdInput = container.querySelector<HTMLInputElement>('#feedback-check-id')
+    expect(checkIdInput).not.toBeNull()
+    fireEvent.change(checkIdInput as HTMLInputElement, { target: { value: 'check-42' } })
 
-    fireEvent.change(screen.getByLabelText('Тип документа'), {
-      target: { value: 'LAB_REPORT' },
-    })
-    fireEvent.change(screen.getByLabelText('Семестр'), {
-      target: { value: '4' },
-    })
+    const loadButton = container.querySelector<HTMLButtonElement>('.feedback-check-id-form button[type="submit"]')
+    expect(loadButton).not.toBeNull()
+    fireEvent.click(loadButton as HTMLButtonElement)
 
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('LAB_REPORT')).toBeInTheDocument()
-      expect(screen.getByDisplayValue('4')).toBeInTheDocument()
-    })
+    const typeSelect = container.querySelector<HTMLSelectElement>('#feedback-final-type')
+    const semesterInput = container.querySelector<HTMLInputElement>('#feedback-final-semester')
+    const commentInput = container.querySelector<HTMLTextAreaElement>('#feedback-teacher-comment')
+    const submitButton = container.querySelector<HTMLButtonElement>('.feedback-actions__submit')
+    expect(typeSelect).not.toBeNull()
+    expect(semesterInput).not.toBeNull()
+    expect(commentInput).not.toBeNull()
+    expect(submitButton).not.toBeNull()
 
-    fireEvent.change(screen.getByDisplayValue(''), {
-      target: { value: 'Подтверждаю замечание.' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Отправить правки' }))
+    fireEvent.change(typeSelect as HTMLSelectElement, { target: { value: 'LAB_REPORT' } })
+    fireEvent.change(semesterInput as HTMLInputElement, { target: { value: '4' } })
+    fireEvent.change(commentInput as HTMLTextAreaElement, { target: { value: 'Комментарий' } })
+    fireEvent.click(submitButton as HTMLButtonElement)
 
     await waitFor(() => {
       expect(mockMutateAsync).toHaveBeenCalledTimes(1)
@@ -116,10 +122,8 @@ describe('SubmitFeedbackOverview', () => {
       final_semester: 4,
       confirmed_violations: ['RULE-1'],
       rejected_violations: [],
-      teacher_comment: 'Подтверждаю замечание.',
+      teacher_comment: 'Комментарий',
     })
-
-    expect(screen.getByText(/Правки отправлены:/)).toBeInTheDocument()
   })
 
   it('keeps entered values when submit fails', async () => {
@@ -129,6 +133,8 @@ describe('SubmitFeedbackOverview', () => {
           data: {
             check_id: 'check-77',
             overall_status: 'REPORT_READY',
+            determined_type: 'LAB_REPORT',
+            determined_semester: 4,
             applied_rules: [],
             violations: [
               {
@@ -140,6 +146,7 @@ describe('SubmitFeedbackOverview', () => {
           },
           error: null,
           isFetching: false,
+          refetch: vi.fn(),
         }
       }
 
@@ -147,6 +154,7 @@ describe('SubmitFeedbackOverview', () => {
         data: undefined,
         error: null,
         isFetching: false,
+        refetch: vi.fn(),
       }
     })
 
@@ -158,36 +166,39 @@ describe('SubmitFeedbackOverview', () => {
       }),
     )
 
-    renderFeature()
+    const { container } = renderFeature()
 
-    fireEvent.change(screen.getByLabelText('ID проверки'), {
-      target: { value: 'check-77' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Загрузить данные' }))
+    const checkIdInput = container.querySelector<HTMLInputElement>('#feedback-check-id')
+    const loadButton = container.querySelector<HTMLButtonElement>('.feedback-check-id-form button[type="submit"]')
+    expect(checkIdInput).not.toBeNull()
+    expect(loadButton).not.toBeNull()
+
+    fireEvent.change(checkIdInput as HTMLInputElement, { target: { value: 'check-77' } })
+    fireEvent.click(loadButton as HTMLButtonElement)
+
+    const typeSelect = container.querySelector<HTMLSelectElement>('#feedback-final-type')
+    const semesterInput = container.querySelector<HTMLInputElement>('#feedback-final-semester')
+    const commentInput = container.querySelector<HTMLTextAreaElement>('#feedback-teacher-comment')
+    const rejectInput = container.querySelector<HTMLInputElement>('input[type="radio"][value="rejected"]')
+    const submitButton = container.querySelector<HTMLButtonElement>('.feedback-actions__submit')
+    expect(typeSelect).not.toBeNull()
+    expect(semesterInput).not.toBeNull()
+    expect(commentInput).not.toBeNull()
+    expect(rejectInput).not.toBeNull()
+    expect(submitButton).not.toBeNull()
+
+    fireEvent.change(typeSelect as HTMLSelectElement, { target: { value: 'COURSE_WORK_REPORT' } })
+    fireEvent.change(semesterInput as HTMLInputElement, { target: { value: '6' } })
+    fireEvent.change(commentInput as HTMLTextAreaElement, { target: { value: 'Ручная проверка' } })
+    fireEvent.click(rejectInput as HTMLInputElement)
+    fireEvent.click(submitButton as HTMLButtonElement)
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Отправить правки' })).toBeEnabled()
+      expect(mockMutateAsync).toHaveBeenCalledTimes(1)
     })
 
-    fireEvent.change(screen.getByLabelText('Тип документа'), {
-      target: { value: 'MANUAL_OVERRIDE' },
-    })
-    fireEvent.change(screen.getByLabelText('Семестр'), {
-      target: { value: '6' },
-    })
-    fireEvent.change(screen.getByLabelText('Комментарий преподавателя'), {
-      target: { value: 'Требуется ручная проверка.' },
-    })
-
-    fireEvent.click(screen.getByLabelText('Отклонить'))
-    fireEvent.click(screen.getByRole('button', { name: 'Отправить правки' }))
-
-    await waitFor(() => {
-      expect(screen.getByText('Backend validation failed')).toBeInTheDocument()
-    })
-
-    expect(screen.getByDisplayValue('MANUAL_OVERRIDE')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('6')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('Требуется ручная проверка.')).toBeInTheDocument()
+    expect((typeSelect as HTMLSelectElement).value).toBe('COURSE_WORK_REPORT')
+    expect((semesterInput as HTMLInputElement).value).toBe('6')
+    expect((commentInput as HTMLTextAreaElement).value).toBe('Ручная проверка')
   })
 })

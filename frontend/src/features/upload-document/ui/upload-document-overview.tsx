@@ -1,18 +1,13 @@
 ﻿import { type FormEvent, type DragEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useTabsState } from '../../../app/providers/tabs-state-provider'
-import { ApiClientError } from '../../../shared/api/error'
+import { toUserFacingMessage } from '../../../shared/api/error'
 import { useUploadMutation } from '../../../shared/api/hooks/use-upload-mutation'
 import { PageCard } from '../../../shared/ui/page-card'
 import { StatePanel } from '../../../shared/ui/state-panel'
 
 const formatError = (error: unknown): string => {
-  if (error instanceof ApiClientError) {
-    // UX-only change: hide trace_id from users, show only user-friendly message
-    return error.message
-  }
-
-  return 'Не удалось загрузить документ.'
+  return toUserFacingMessage(error, 'Не удалось загрузить документ.')
 }
 
 export const UploadDocumentOverview = () => {

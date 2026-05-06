@@ -1,7 +1,7 @@
 ﻿import { type FormEvent, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useTabsState } from '../../../app/providers/tabs-state-provider'
-import { ApiClientError } from '../../../shared/api/error'
+import { toUserFacingMessage } from '../../../shared/api/error'
 import { useReportQuery } from '../../../shared/api/hooks/use-report-query'
 import { PageCard } from '../../../shared/ui/page-card'
 import { StatePanel } from '../../../shared/ui/state-panel'
@@ -12,15 +12,7 @@ const resolveCheckId = (searchParams: URLSearchParams): string => {
 }
 
 const formatError = (error: unknown, fallbackMessage: string): string => {
-  if (error instanceof ApiClientError) {
-    if (error.traceId) {
-      return `${error.message} (trace_id: ${error.traceId})`
-    }
-
-    return error.message
-  }
-
-  return fallbackMessage
+  return toUserFacingMessage(error, fallbackMessage)
 }
 
 export const RulesInspectorOverview = () => {
@@ -86,7 +78,7 @@ export const RulesInspectorOverview = () => {
   return (
     <PageCard title="Правила" description="">
       <form className="rules-check-id-form" onSubmit={handleLoadRules}>
-        <label htmlFor="rules-check-id">ID проверки</label>
+        <label htmlFor="rules-check-id">Идентификатор проверки</label>
         <div className="rules-check-id-form__controls">
           <input
             id="rules-check-id"
@@ -94,7 +86,7 @@ export const RulesInspectorOverview = () => {
             type="text"
             value={checkIdInput}
             onChange={(event) => setRules((current) => ({ ...current, checkIdInput: event.target.value }))}
-            placeholder="Введите ID проверки"
+            placeholder="Введите идентификатор проверки"
             autoComplete="off"
           />
           <button type="submit" disabled={reportQuery.isFetching}>
@@ -113,7 +105,7 @@ export const RulesInspectorOverview = () => {
       </section>
 
       {!activeCheckId && !reportQuery.isFetching ? (
-        <StatePanel tone="empty" title="Введите ID проверки" message="Укажите ID проверки, чтобы загрузить информацию о правилах." />
+        <StatePanel tone="empty" title="Введите идентификатор проверки" message="Укажите идентификатор проверки, чтобы загрузить информацию о правилах." />
       ) : null}
 
       {reportQuery.isFetching ? <StatePanel tone="loading" title="Загрузка правил" message="Получаем данные о правилах и нарушениях." /> : null}
@@ -134,7 +126,7 @@ export const RulesInspectorOverview = () => {
         <section className="rules-trace" aria-label="Состояние правил">
           <h2>Состояние правил</h2>
           {tracedRules.length === 0 ? (
-            <StatePanel tone="empty" title="Правил не найдено" message="В отчёте нет правил для выбранного ID проверки." />
+            <StatePanel tone="empty" title="Правил не найдено" message="В отчёте нет правил для выбранного идентификатора проверки." />
           ) : (
             <ul>
               {tracedRules.map((rule) => (

@@ -1,6 +1,7 @@
-﻿import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { TabsStateProvider } from '../../../app/providers/tabs-state-provider'
 import { ApiClientError } from '../../../shared/api/error'
 import { RulesInspectorOverview } from './rules-inspector-overview'
 
@@ -13,7 +14,9 @@ vi.mock('../../../shared/api/hooks/use-report-query', () => ({
 const renderFeature = () => {
   return render(
     <MemoryRouter initialEntries={['/rules']}>
-      <RulesInspectorOverview />
+      <TabsStateProvider>
+        <RulesInspectorOverview />
+      </TabsStateProvider>
     </MemoryRouter>,
   )
 }
@@ -29,6 +32,7 @@ describe('RulesInspectorOverview', () => {
       data: undefined,
       error: null,
       isFetching: false,
+      refetch: vi.fn(),
     })
   })
 
@@ -51,6 +55,7 @@ describe('RulesInspectorOverview', () => {
           },
           error: null,
           isFetching: false,
+          refetch: vi.fn(),
         }
       }
 
@@ -58,6 +63,7 @@ describe('RulesInspectorOverview', () => {
         data: undefined,
         error: null,
         isFetching: false,
+        refetch: vi.fn(),
       }
     })
 
@@ -65,7 +71,7 @@ describe('RulesInspectorOverview', () => {
 
     expect(screen.getByRole('heading', { name: 'Применённые правила' })).toBeInTheDocument()
 
-    fireEvent.change(screen.getByLabelText('ID проверки'), {
+    fireEvent.change(screen.getByLabelText('Идентификатор проверки'), {
       target: { value: 'check-101' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Показать правила' }))
@@ -92,6 +98,7 @@ describe('RulesInspectorOverview', () => {
             statusCode: 404,
           }),
           isFetching: false,
+          refetch: vi.fn(),
         }
       }
 
@@ -99,18 +106,19 @@ describe('RulesInspectorOverview', () => {
         data: undefined,
         error: null,
         isFetching: false,
+        refetch: vi.fn(),
       }
     })
 
     renderFeature()
 
-    fireEvent.change(screen.getByLabelText('ID проверки'), {
+    fireEvent.change(screen.getByLabelText('Идентификатор проверки'), {
       target: { value: 'bad-check' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Показать правила' }))
 
     await waitFor(() => {
-      expect(screen.getByText('Report not found')).toBeInTheDocument()
+      expect(screen.getByText('Данные не найдены.')).toBeInTheDocument()
     })
   })
 })

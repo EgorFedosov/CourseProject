@@ -1,4 +1,5 @@
 import type { ReportResponse } from '../../../shared/api/contracts/report'
+import { formatCategory, formatRuleTitle, formatSeverity } from '../../../shared/model/localization'
 
 export type RuleTraceStatus = 'satisfied' | 'violated'
 
@@ -11,7 +12,12 @@ export interface RuleTraceItem {
   evidence: string[]
 }
 
-const fallbackValue = 'n/a'
+const fallbackValue = 'Не указано'
+const knownRuleFallbackMeta: Record<string, { category: string; severity: string }> = {
+  'REQ-INTRO-001': { category: 'structure', severity: 'high' },
+  'REQ-CONCLUSION-001': { category: 'structure', severity: 'high' },
+  'REQ-FONT-001': { category: 'formatting', severity: 'medium' },
+}
 
 export const buildRulesTrace = (report: ReportResponse | undefined): RuleTraceItem[] => {
   if (!report) {
@@ -22,12 +28,13 @@ export const buildRulesTrace = (report: ReportResponse | undefined): RuleTraceIt
     const evidence = report.violations
       .filter((violation) => violation.code === rule.code)
       .map((violation) => violation.message)
+    const fallbackMeta = knownRuleFallbackMeta[rule.code]
 
     return {
       code: rule.code,
-      title: rule.title ?? fallbackValue,
-      category: rule.category ?? fallbackValue,
-      severity: rule.severity ?? fallbackValue,
+      title: formatRuleTitle(rule.code, rule.title ?? fallbackValue),
+      category: formatCategory(rule.category ?? fallbackMeta?.category ?? fallbackValue),
+      severity: formatSeverity(rule.severity ?? fallbackMeta?.severity ?? fallbackValue),
       status: evidence.length > 0 ? 'violated' : 'satisfied',
       evidence,
     }

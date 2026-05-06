@@ -37,6 +37,7 @@ from app.infrastructure.neo4j.repositories.rule_repository import Neo4jRuleRepos
 from app.infrastructure.pipeline.deterministic_pipeline import (
     DeterministicAnalysisPipeline,
 )
+from app.infrastructure.parsers.unified_document_parser import UnifiedDocumentParser
 from app.infrastructure.storage.local_document_storage import LocalDocumentStorage
 
 
@@ -98,12 +99,15 @@ def get_ai_assistant(settings: Settings = Depends(get_settings)) -> AiAssistant 
 
 def get_analysis_pipeline(
     rule_repository: RuleReadRepository = Depends(get_rule_repository),
+    document_repository: DocumentRepository = Depends(get_document_repository),
     feedback_repository: FeedbackRepository = Depends(get_feedback_repository),
     ai_assistant: AiAssistant | None = Depends(get_ai_assistant),
     settings: Settings = Depends(get_settings),
 ) -> AnalysisPipeline:
     return DeterministicAnalysisPipeline(
         rule_repository=rule_repository,
+        document_repository=document_repository,
+        document_parser=UnifiedDocumentParser(),
         feedback_repository=feedback_repository,
         ai_assistant=ai_assistant,
         similar_cases_limit=settings.ai_similar_cases_limit,

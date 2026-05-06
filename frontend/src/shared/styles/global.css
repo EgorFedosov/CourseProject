@@ -266,6 +266,7 @@ a {
 .report-check-id-form input,
 .feedback-check-id-form input,
 .feedback-form input,
+.feedback-form select,
 .feedback-form textarea {
   width: 100%;
   border: 1px solid rgba(29, 73, 138, 0.16);
@@ -368,6 +369,7 @@ a {
 
 .feedback-check-id-form input,
 .feedback-form input,
+.feedback-form select,
 .feedback-form textarea {
   width: 100%;
   border: 1px solid rgba(29, 73, 138, 0.16);
@@ -1202,6 +1204,11 @@ a {
 .feedback-form__textarea {
   resize: vertical;
   min-height: 100px;
+}
+
+.feedback-form__hint {
+  color: var(--text-muted);
+  font-size: 0.84rem;
 }
 
 /* Violations section */

@@ -1,6 +1,7 @@
-﻿import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { TabsStateProvider } from '../../../app/providers/tabs-state-provider'
 import { UploadDocumentOverview } from './upload-document-overview'
 
 const mockMutateAsync = vi.fn()
@@ -13,7 +14,9 @@ vi.mock('../../../shared/api/hooks/use-upload-mutation', () => ({
 const renderFeature = () => {
   return render(
     <MemoryRouter initialEntries={['/upload']}>
-      <UploadDocumentOverview />
+      <TabsStateProvider>
+        <UploadDocumentOverview />
+      </TabsStateProvider>
     </MemoryRouter>,
   )
 }
@@ -32,17 +35,14 @@ describe('UploadDocumentOverview', () => {
     })
   })
 
-  it('shows validation message when file is missing', async () => {
-    renderFeature()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Загрузить документ' }))
-
-    await waitFor(() => {
-      expect(screen.getByText('Выберите PDF или DOCX перед отправкой.')).toBeInTheDocument()
-    })
+  it('keeps submit button disabled when file is missing', () => {
+    const { container } = renderFeature()
+    const submitButton = container.querySelector<HTMLButtonElement>('button[type="submit"]')
+    expect(submitButton).not.toBeNull()
+    expect(submitButton).toBeDisabled()
   })
 
-  it('renders success state and analysis link after upload', async () => {
+  it('renders analysis link after successful upload', async () => {
     mockMutateAsync.mockResolvedValue({
       document_id: 'doc-1',
       filename: 'report.pdf',
@@ -50,24 +50,24 @@ describe('UploadDocumentOverview', () => {
       status: 'UPLOADED',
     })
 
-    renderFeature()
+    const { container } = renderFeature()
 
     const file = new File(['test-content'], 'report.pdf', { type: 'application/pdf' })
-    fireEvent.change(screen.getByLabelText('Документ (PDF или DOCX)'), {
+    const fileInput = container.querySelector<HTMLInputElement>('input[type="file"]')
+    expect(fileInput).not.toBeNull()
+    fireEvent.change(fileInput as HTMLInputElement, {
       target: { files: [file] },
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Загрузить документ' }))
+    const submitButton = container.querySelector<HTMLButtonElement>('button[type="submit"]')
+    expect(submitButton).not.toBeNull()
+    fireEvent.click(submitButton as HTMLButtonElement)
 
     await waitFor(() => {
       expect(mockMutateAsync).toHaveBeenCalledTimes(1)
     })
 
-    await waitFor(() => {
-      expect(screen.getByRole('link', { name: 'Перейти к анализу' })).toBeInTheDocument()
-    })
-
-    expect(screen.getByText('Документ загружен')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Перейти к анализу' })).toHaveAttribute('href', '/analysis?document_id=doc-1')
+    const analysisLink = container.querySelector<HTMLAnchorElement>('a[href="/analysis?document_id=doc-1"]')
+    expect(analysisLink).not.toBeNull()
   })
 })

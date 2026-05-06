@@ -71,7 +71,7 @@ export const TabsStateProvider = ({ children }: { children: ReactNode }) => {
 
   const [analysis, setAnalysis] = useState<AnalysisTabState>({
     documentId: '',
-    requestedBy: 'teacher@course.local',
+    requestedBy: 'преподаватель',
     activeCheckId: null,
     startError: null,
   })

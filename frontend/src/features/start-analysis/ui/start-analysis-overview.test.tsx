@@ -1,6 +1,7 @@
-﻿import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { TabsStateProvider } from '../../../app/providers/tabs-state-provider'
 import { StartAnalysisOverview } from './start-analysis-overview'
 
 const mockStartMutateAsync = vi.fn()
@@ -18,7 +19,9 @@ vi.mock('../../../shared/api/hooks/use-analysis-status-query', () => ({
 const renderFeature = () => {
   return render(
     <MemoryRouter initialEntries={['/analysis']}>
-      <StartAnalysisOverview />
+      <TabsStateProvider>
+        <StartAnalysisOverview />
+      </TabsStateProvider>
     </MemoryRouter>,
   )
 }
@@ -76,7 +79,7 @@ describe('StartAnalysisOverview', () => {
 
     renderFeature()
 
-    fireEvent.change(screen.getByLabelText('ID документа'), {
+    fireEvent.change(screen.getByLabelText('Идентификатор документа'), {
       target: { value: 'doc-77' },
     })
 
@@ -86,7 +89,10 @@ describe('StartAnalysisOverview', () => {
       expect(screen.getByText('Отчёт готов')).toBeInTheDocument()
     })
 
-    expect(screen.getByRole('link', { name: 'Открыть отчёт' })).toHaveAttribute('href', '/report?check_id=check-ready')
+    expect(screen.getByRole('link', { name: 'Открыть отчёт' })).toHaveAttribute(
+      'href',
+      '/report?check_id=check-ready',
+    )
   })
 
   it('handles ERROR status with recoverable state', async () => {
@@ -122,7 +128,7 @@ describe('StartAnalysisOverview', () => {
 
     renderFeature()
 
-    fireEvent.change(screen.getByLabelText('ID документа'), {
+    fireEvent.change(screen.getByLabelText('Идентификатор документа'), {
       target: { value: 'doc-99' },
     })
 
@@ -130,7 +136,7 @@ describe('StartAnalysisOverview', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Анализ завершился с ошибкой')).toBeInTheDocument()
-      expect(screen.getByText('AI provider unavailable')).toBeInTheDocument()
+      expect(screen.getByText('Произошла ошибка в процессе проверки.')).toBeInTheDocument()
     })
 
     fireEvent.click(screen.getByRole('button', { name: 'Повторить' }))

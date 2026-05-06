@@ -1,6 +1,7 @@
-﻿import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { TabsStateProvider } from '../../../app/providers/tabs-state-provider'
 import { ApiClientError } from '../../../shared/api/error'
 import { ReportViewOverview } from './report-view-overview'
 
@@ -13,7 +14,9 @@ vi.mock('../../../shared/api/hooks/use-report-query', () => ({
 const renderFeature = () => {
   return render(
     <MemoryRouter initialEntries={['/report']}>
-      <ReportViewOverview />
+      <TabsStateProvider>
+        <ReportViewOverview />
+      </TabsStateProvider>
     </MemoryRouter>,
   )
 }
@@ -41,8 +44,9 @@ describe('ReportViewOverview', () => {
         return {
           data: {
             check_id: 'check-500',
-            overall_status: 'REPORT_READY',
+            overall_status: 'compliant',
             determined_type: 'LAB_REPORT',
+            determined_semester: 4,
             applied_rules: [{ code: 'RULE-1' }],
             violations: [{ code: 'RULE-2', message: 'Mismatch' }],
             recommendations: ['Fix issue'],
@@ -65,21 +69,25 @@ describe('ReportViewOverview', () => {
 
     renderFeature()
 
-    fireEvent.change(screen.getByLabelText('ID проверки'), {
+    fireEvent.change(screen.getByLabelText('Идентификатор проверки'), {
       target: { value: 'check-500' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Показать отчёт' }))
 
     await waitFor(() => {
-      expect(screen.getByText('Статус: Готов')).toBeInTheDocument()
+      expect(screen.getByText('Соответствует требованиям')).toBeInTheDocument()
     })
 
-    expect(screen.getByText('Тип документа: LAB_REPORT')).toBeInTheDocument()
-    expect(screen.getByText('Нарушений: 1')).toBeInTheDocument()
-    expect(screen.getByText('Отчёт неполный: отсутствуют поля семестр.')).toBeInTheDocument()
-
-    expect(screen.getByRole('link', { name: 'Перейти к правкам' })).toHaveAttribute('href', '/feedback?check_id=check-500')
-    expect(screen.getByRole('link', { name: 'Перейти к правилам' })).toHaveAttribute('href', '/rules?check_id=check-500')
+    expect(screen.getByText('Лабораторный отчёт')).toBeInTheDocument()
+    expect(screen.getByText('Нарушений найдено')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Перейти к правкам' })).toHaveAttribute(
+      'href',
+      '/feedback?check_id=check-500',
+    )
+    expect(screen.getByRole('link', { name: 'Перейти к правилам' })).toHaveAttribute(
+      'href',
+      '/rules?check_id=check-500',
+    )
   })
 
   it('shows backend error and retry action', async () => {
@@ -111,13 +119,15 @@ describe('ReportViewOverview', () => {
 
     renderFeature()
 
-    fireEvent.change(screen.getByLabelText('ID проверки'), {
+    fireEvent.change(screen.getByLabelText('Идентификатор проверки'), {
       target: { value: 'bad-check' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Показать отчёт' }))
 
     await waitFor(() => {
-      expect(screen.getByText('Report endpoint failed')).toBeInTheDocument()
+      expect(
+        screen.getByText('Произошла ошибка сервера. Повторите попытку позже.'),
+      ).toBeInTheDocument()
     })
 
     fireEvent.click(screen.getByRole('button', { name: 'Повторить запрос' }))

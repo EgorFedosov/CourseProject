@@ -1,9 +1,10 @@
 ﻿import { type FormEvent, useEffect, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useTabsState } from '../../../app/providers/tabs-state-provider'
-import { ApiClientError } from '../../../shared/api/error'
+import { toUserFacingMessage } from '../../../shared/api/error'
 import { useAnalysisStatusQuery } from '../../../shared/api/hooks/use-analysis-status-query'
 import { useStartAnalysisMutation } from '../../../shared/api/hooks/use-start-analysis-mutation'
+import { formatPipelineStatus } from '../../../shared/model/localization'
 import { PageCard } from '../../../shared/ui/page-card'
 import { StatePanel } from '../../../shared/ui/state-panel'
 
@@ -12,16 +13,10 @@ const resolveParam = (params: URLSearchParams, key: string): string => {
 }
 
 const formatError = (error: unknown, fallback: string): string => {
-  if (error instanceof ApiClientError) {
-    // UX-only change: hide trace_id from users, show only user-friendly message
-    return error.message
-  }
-
-  return fallback
+  return toUserFacingMessage(error, fallback)
 }
 
 const getPipelineStages = (status?: string): Array<{ id: string; name: string; active: boolean; completed: boolean }> => {
-  // UX-only change: show analysis pipeline stages
   const stages = [
     { id: 'init', name: 'Инициализация', active: false, completed: false },
     { id: 'classify', name: 'Классификация', active: false, completed: false },
@@ -30,14 +25,38 @@ const getPipelineStages = (status?: string): Array<{ id: string; name: string; a
   ]
 
   switch (status) {
+    case 'UPLOADED':
+    case 'ANALYZING':
+      return stages.map((stage, index) => ({
+        ...stage,
+        active: index === 0,
+        completed: false,
+      }))
+    case 'TYPE_DETERMINED':
+      return stages.map((stage, index) => ({
+        ...stage,
+        active: index === 1,
+        completed: index < 1,
+      }))
+    case 'SEMESTER_DETERMINED':
+      return stages.map((stage, index) => ({
+        ...stage,
+        active: index === 2,
+        completed: index < 2,
+      }))
+    case 'REQUIREMENTS_CHECKED':
+      return stages.map((stage, index) => ({
+        ...stage,
+        active: index === 3,
+        completed: index < 3,
+      }))
     case 'REPORT_READY':
       return stages.map((s) => ({ ...s, completed: true }))
-    case 'ANALYZING':
-      // Show all stages as in-progress (active means current or in-progress)
-      return stages.map((s, idx) => ({
-        ...s,
-        active: idx < stages.length - 1,
-        completed: idx < 1,
+    case 'ERROR':
+      return stages.map((stage, index) => ({
+        ...stage,
+        active: false,
+        completed: index < 3,
       }))
     default:
       return stages
@@ -86,7 +105,6 @@ export const StartAnalysisOverview = () => {
     })
   }, [lastCheckId, lastDocumentId, searchParams, setAnalysis])
 
-  // UX-only change: compute pipeline stages based on status
   const pipelineStages = useMemo(
     () => getPipelineStages(statusQuery.data?.status),
     [statusQuery.data?.status]
@@ -103,7 +121,7 @@ export const StartAnalysisOverview = () => {
     if (normalizedDocumentId.length === 0 || normalizedRequestedBy.length === 0) {
       setAnalysis((current) => ({
         ...current,
-        startError: 'Укажите document_id и requested_by перед запуском анализа.',
+        startError: 'Укажите идентификатор документа и автора запроса перед запуском анализа.',
       }))
       return
     }
@@ -149,23 +167,23 @@ export const StartAnalysisOverview = () => {
       <form className="analysis-form" onSubmit={submitStart}>
         {!activeCheckId ? (
           <>
-            <label htmlFor="analysis-document-id">ID документа</label>
+            <label htmlFor="analysis-document-id">Идентификатор документа</label>
             <input
               id="analysis-document-id"
               type="text"
               value={documentId}
               onChange={(event) => setAnalysis((current) => ({ ...current, documentId: event.target.value }))}
-              placeholder="Введите ID документа"
+              placeholder="Введите идентификатор документа"
               autoComplete="off"
             />
 
-            <label htmlFor="analysis-requested-by">Запрашивает</label>
+            <label htmlFor="analysis-requested-by">Автор запроса</label>
             <input
               id="analysis-requested-by"
               type="text"
               value={requestedBy}
               onChange={(event) => setAnalysis((current) => ({ ...current, requestedBy: event.target.value }))}
-              placeholder="Например, ваш email"
+              placeholder="Например: преподаватель"
               autoComplete="off"
             />
           </>
@@ -210,7 +228,11 @@ export const StartAnalysisOverview = () => {
         <StatePanel
           tone="error"
           title="Анализ завершился с ошибкой"
-          message={statusQuery.data.error ?? 'Произошла ошибка в процессе проверки.'}
+          message={
+            statusQuery.data.error && /[А-Яа-яЁё]/.test(statusQuery.data.error)
+              ? statusQuery.data.error
+              : 'Произошла ошибка в процессе проверки.'
+          }
           actionLabel="Повторить"
           onAction={() => {
             void statusQuery.refetch()
@@ -245,8 +267,8 @@ export const StartAnalysisOverview = () => {
               statusQuery.data.status === 'REPORT_READY'
                 ? 'Готово к просмотру отчёта.'
                 : typeof statusQuery.data.progress === 'number'
-                ? `Идёт проверка — ${statusQuery.data.progress}% готово.`
-                : 'Идёт проверка, подождите.'
+                ? `${formatPipelineStatus(statusQuery.data.status)}: ${statusQuery.data.progress}% готово.`
+                : `${formatPipelineStatus(statusQuery.data.status)}.`
             }
           >
             {statusQuery.data.status === 'REPORT_READY' ? (

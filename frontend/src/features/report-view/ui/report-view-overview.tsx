@@ -1,8 +1,9 @@
 ﻿import { type FormEvent, useEffect, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useTabsState } from '../../../app/providers/tabs-state-provider'
-import { ApiClientError } from '../../../shared/api/error'
+import { toUserFacingMessage } from '../../../shared/api/error'
 import { useReportQuery } from '../../../shared/api/hooks/use-report-query'
+import { formatDocumentType, formatPipelineStatus } from '../../../shared/model/localization'
 import { PageCard } from '../../../shared/ui/page-card'
 import { StatePanel } from '../../../shared/ui/state-panel'
 
@@ -11,29 +12,28 @@ const resolveCheckId = (params: URLSearchParams): string => {
 }
 
 const formatError = (error: unknown): string => {
-  if (error instanceof ApiClientError) {
-    // UX-only change: hide trace_id from users, show only user-friendly message
-    return error.message
-  }
-
-  return 'Не удалось загрузить отчёт.'
+  return toUserFacingMessage(error, 'Не удалось загрузить отчёт.')
 }
 
 const formatOverallStatus = (status: string): { text: string; tone: 'success' | 'warning' | 'error' } => {
-  // UX-only change: user-friendly status formatting
   switch (status) {
+    case 'compliant':
+      return { text: 'Соответствует требованиям', tone: 'success' }
+    case 'partially_compliant':
+      return { text: 'Есть замечания', tone: 'warning' }
+    case 'non_compliant':
+      return { text: 'Не соответствует требованиям', tone: 'error' }
+    case 'unknown':
+      return { text: 'Статус не определён', tone: 'warning' }
     case 'REPORT_READY':
-      return { text: 'Проверка завершена', tone: 'success' }
     case 'ANALYZING':
-      return { text: 'В процессе', tone: 'warning' }
     case 'UPLOADED':
-      return { text: 'Загружен', tone: 'warning' }
     case 'NOT_UPLOADED':
-      return { text: 'Не загружен', tone: 'error' }
+      return { text: formatPipelineStatus(status), tone: status === 'REPORT_READY' ? 'success' : 'warning' }
     case 'ERROR':
       return { text: 'Ошибка', tone: 'error' }
     default:
-      return { text: status, tone: 'warning' }
+      return { text: 'Статус не определён', tone: 'warning' }
   }
 }
 
@@ -120,14 +120,14 @@ export const ReportViewOverview = () => {
   return (
     <PageCard title="Отчёт" description="">
       <form className="report-check-id-form" onSubmit={submitCheckId}>
-        <label htmlFor="report-check-id">ID проверки</label>
+        <label htmlFor="report-check-id">Идентификатор проверки</label>
         <div className="report-check-id-form__controls">
           <input
             id="report-check-id"
             type="text"
             value={checkIdInput}
             onChange={(event) => setReport((current) => ({ ...current, checkIdInput: event.target.value }))}
-            placeholder="Введите ID проверки"
+            placeholder="Введите идентификатор проверки"
             autoComplete="off"
           />
           <button type="submit" disabled={reportQuery.isFetching}>
@@ -137,7 +137,7 @@ export const ReportViewOverview = () => {
       </form>
 
       {!activeCheckId ? (
-        <StatePanel tone="empty" title="Введите ID проверки" message="Укажите ID проверки, чтобы увидеть отчёт." />
+        <StatePanel tone="empty" title="Введите идентификатор проверки" message="Укажите идентификатор проверки, чтобы увидеть отчёт." />
       ) : null}
 
       {activeCheckId && reportQuery.isLoading ? (
@@ -175,7 +175,7 @@ export const ReportViewOverview = () => {
             <div className="report-summary__grid">
               <div className="report-summary__field">
                 <label>Тип документа</label>
-                <strong>{reportQuery.data.determined_type ?? '—'}</strong>
+                <strong>{formatDocumentType(reportQuery.data.determined_type)}</strong>
               </div>
               <div className="report-summary__field">
                 <label>Семестр</label>

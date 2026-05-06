@@ -136,3 +136,43 @@ export const shouldRetryStatusQuery = (failureCount: number, error: unknown): bo
 
   return false
 }
+
+const hasCyrillic = (value: string): boolean => /[А-Яа-яЁё]/.test(value)
+
+export const toUserFacingMessage = (error: unknown, fallback: string): string => {
+  if (!(error instanceof ApiClientError)) {
+    return fallback
+  }
+
+  if (hasCyrillic(error.message)) {
+    return error.message
+  }
+
+  if (error.code === 'NETWORK_ERROR') {
+    return 'Сервер недоступен. Проверьте подключение и повторите попытку.'
+  }
+
+  if (error.code === 'CONTRACT_ERROR') {
+    return 'Сервис вернул неожиданный ответ. Повторите запрос.'
+  }
+
+  if (error.code === 'HTTP_ERROR') {
+    if (error.statusCode === 404) {
+      return 'Данные не найдены.'
+    }
+    if (error.statusCode === 409) {
+      return 'Операция пока недоступна. Попробуйте позже.'
+    }
+    if (error.statusCode === 413) {
+      return 'Размер файла превышает допустимый лимит.'
+    }
+    if (error.statusCode === 400) {
+      return 'Проверьте корректность введённых данных.'
+    }
+    if (typeof error.statusCode === 'number' && error.statusCode >= 500) {
+      return 'Произошла ошибка сервера. Повторите попытку позже.'
+    }
+  }
+
+  return fallback
+}

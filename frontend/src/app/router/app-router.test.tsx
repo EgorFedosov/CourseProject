@@ -23,7 +23,7 @@ describe('App routing', () => {
     { path: '/upload', heading: 'Загрузка документа' },
     { path: '/analysis', heading: 'Проверка документа' },
     { path: '/report', heading: 'Отчёт' },
-    { path: '/feedback', heading: 'Правки' },
+    { path: '/feedback', heading: 'Проверка и корректировка результата' },
     { path: '/rules', heading: 'Правила' },
   ]
 
@@ -47,7 +47,9 @@ describe('App routing', () => {
     expect(screen.getByRole('heading', { name: 'Отчёт' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('link', { name: 'Правки' }))
-    expect(screen.getByRole('heading', { name: 'Правки' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Проверка и корректировка результата' }),
+    ).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('link', { name: 'Правила' }))
     expect(screen.getByRole('heading', { name: 'Правила' })).toBeInTheDocument()

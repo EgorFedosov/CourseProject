@@ -1,9 +1,10 @@
 ﻿import { type FormEvent, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useTabsState } from '../../../app/providers/tabs-state-provider'
-import { ApiClientError } from '../../../shared/api/error'
+import { toUserFacingMessage } from '../../../shared/api/error'
 import { useReportQuery } from '../../../shared/api/hooks/use-report-query'
 import { useSubmitFeedbackMutation } from '../../../shared/api/hooks/use-submit-feedback-mutation'
+import { formatCategory, formatSeverity } from '../../../shared/model/localization'
 import { PageCard } from '../../../shared/ui/page-card'
 import { StatePanel } from '../../../shared/ui/state-panel'
 import { buildFeedbackPayload, getUniqueViolationCodes, type ViolationDecisionMap } from '../model/corrections-form'
@@ -13,15 +14,16 @@ const resolveCheckId = (searchParams: URLSearchParams): string => {
 }
 
 const formatError = (error: unknown, fallbackMessage: string): string => {
-  if (error instanceof ApiClientError) {
-    // UX-only change: hide trace_id from users, show only user-friendly message
-    return error.message
-  }
-
-  return fallbackMessage
+  return toUserFacingMessage(error, fallbackMessage)
 }
 
 export const SubmitFeedbackOverview = () => {
+  const documentTypeOptions = [
+    { value: 'COURSE_PROJECT_NOTE', label: 'Пояснительная записка к курсовому проекту' },
+    { value: 'COURSE_WORK_REPORT', label: 'Отчёт по курсовой работе' },
+    { value: 'LAB_REPORT', label: 'Лабораторный отчёт' },
+  ]
+
   const [searchParams, setSearchParams] = useSearchParams()
   const {
     feedback,
@@ -72,6 +74,8 @@ export const SubmitFeedbackOverview = () => {
   }, [lastCheckId, searchParams, setFeedback])
 
   const resolvedFinalType = finalType.trim().length > 0 ? finalType : (reportQuery.data?.determined_type ?? '')
+  const hasKnownDocumentType = documentTypeOptions.some((option) => option.value === resolvedFinalType)
+  const selectedDocumentType = hasKnownDocumentType ? resolvedFinalType : ''
   const resolvedFinalSemester =
     finalSemester.trim().length > 0
       ? finalSemester
@@ -84,7 +88,7 @@ export const SubmitFeedbackOverview = () => {
     if (normalizedCheckId.length === 0) {
       setFeedback((current) => ({
         ...current,
-        formError: 'Укажите ID проверки для загрузки отчёта.',
+        formError: 'Укажите идентификатор проверки для загрузки отчёта.',
       }))
       return
     }
@@ -142,20 +146,11 @@ export const SubmitFeedbackOverview = () => {
     }
 
     try {
-      const response = await submitMutation.mutateAsync(payloadResult.payload)
-      const details = [response.status]
-
-      if (response.message) {
-        details.push(response.message)
-      }
-
-      if (response.case_id) {
-        details.push(`case_id: ${response.case_id}`)
-      }
+      await submitMutation.mutateAsync(payloadResult.payload)
 
       setFeedback((current) => ({
         ...current,
-        submitResult: `Правки отправлены: ${details.join(' · ')}`,
+        submitResult: 'Правки успешно отправлены и сохранены.',
       }))
     } catch (error) {
       setFeedback((current) => ({
@@ -174,7 +169,7 @@ export const SubmitFeedbackOverview = () => {
     >
       {/* UX-only change: improved feedback form layout with teacher-focused design */}
       <form className="feedback-check-id-form" onSubmit={handleLoadReport}>
-        <label htmlFor="feedback-check-id">ID проверки</label>
+        <label htmlFor="feedback-check-id">Идентификатор проверки</label>
         <div className="feedback-check-id-form__controls">
           <input
             id="feedback-check-id"
@@ -182,7 +177,7 @@ export const SubmitFeedbackOverview = () => {
             type="text"
             value={checkIdInput}
             onChange={(event) => setFeedback((current) => ({ ...current, checkIdInput: event.target.value }))}
-            placeholder="Введите ID проверки"
+            placeholder="Введите идентификатор проверки"
             autoComplete="off"
           />
           <button type="submit" disabled={reportQuery.isFetching}>
@@ -192,7 +187,7 @@ export const SubmitFeedbackOverview = () => {
       </form>
 
       {!activeCheckId && !reportQuery.isFetching ? (
-        <StatePanel tone="empty" title="Укажите ID проверки" message="Введите ID проверки, чтобы начать проверку и корректировку результатов." />
+        <StatePanel tone="empty" title="Укажите идентификатор проверки" message="Введите идентификатор проверки, чтобы начать проверку и корректировку результатов." />
       ) : null}
 
       {reportQuery.isFetching ? <StatePanel tone="loading" title="Загрузка отчёта" message="Получаем данные для проверки..." /> : null}
@@ -221,15 +216,20 @@ export const SubmitFeedbackOverview = () => {
               <div className="feedback-form__grid">
                 <label htmlFor="feedback-final-type" className="feedback-form__label">
                   <span className="feedback-form__label-text">Тип документа</span>
-                  <input
+                  <select
                     id="feedback-final-type"
                     name="final_type"
-                    type="text"
-                    value={resolvedFinalType}
+                    value={selectedDocumentType}
                     onChange={(event) => setFeedback((current) => ({ ...current, finalType: event.target.value }))}
-                    placeholder="Например: LAB_REPORT"
                     className="feedback-form__input"
-                  />
+                  >
+                    <option value="">Выберите тип документа</option>
+                    {documentTypeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </label>
 
                 <label htmlFor="feedback-final-semester" className="feedback-form__label">
@@ -272,9 +272,9 @@ export const SubmitFeedbackOverview = () => {
                             {example?.message ? <p className="feedback-violation-item__message">{example.message}</p> : null}
                             {example?.severity || example?.category ? (
                               <small className="feedback-violation-item__meta">
-                                {example.severity ? `Серьёзность: ${example.severity}` : null}
+                                {example.severity ? `Серьёзность: ${formatSeverity(example.severity)}` : null}
                                 {example.severity && example.category ? ' • ' : ''}
-                                {example.category ? `Категория: ${example.category}` : null}
+                                {example.category ? `Категория: ${formatCategory(example.category)}` : null}
                               </small>
                             ) : null}
                           </div>
