@@ -116,6 +116,37 @@
 2. Разделы и шрифтовые признаки используются в проверках требований.
 3. При отсутствии парсера/данных включается безопасный fallback, чтобы анализ не падал на ровном месте.
 
+### 5.1.1 Важные ограничения текущего парсинга
+1. Основной акцент сделан на текст, заголовки разделов и типографику (семейство/размер шрифта).
+2. Табуляция (`tab stop`) не выделяется в отдельный признак проверки.
+3. Таблицы, рисунки, формулы, поля Word и сложная верстка не участвуют в отдельной rule-проверке как структурные сущности.
+4. Для текстовых эвристик применяется нормализация пробелов, поэтому множественные пробелы/переносы не считаются отдельными признаками.
+
+### 5.1.2 Как именно документ «разбивается» на разделы
+Разбиение реализовано как извлечение набора кандидатных заголовков `sections`, а не как полная иерархия глав/подглав.
+
+Для `DOCX`:
+1. Читается `word/document.xml` и проходится каждый параграф.
+2. Параграф считается заголовком, если:
+- у него стиль `Heading*`/`Заголовок*`, или
+- срабатывает эвристика `_looks_like_heading(...)`:
+  - не пустой текст;
+  - не больше 7 слов;
+  - не заканчивается на `.`, `!`, `?`;
+  - длина до 90 символов;
+  - либо это явные названия ключевых разделов (`introduction`, `conclusion` и их русские эквиваленты).
+3. Заголовки дедуплицируются по нормализованному значению (`lower + trim + collapse spaces`).
+
+Для `PDF`:
+1. Через `PyMuPDF` читаются текстовые блоки и строки (`page.get_text("dict")`).
+2. Строки также пропускаются через `_looks_like_heading(...)`.
+3. Если `PyMuPDF` недоступен, используется fallback через `pypdf` с построчным анализом.
+
+Важно:
+1. Дополнительно строится `tokens` через regex `[\w\-]+`.
+2. Rule-engine дальше работает именно с `sections_normalized`, `raw_text`, `tokens`, `dominant_font_*`.
+3. Отдельной проверки табуляции/отступов в текущей версии нет.
+
 ### 5.2 Откуда берутся правила и как они выбираются
 Правила берутся из Neo4j, не из hardcode в frontend/backend-роутах.
 
@@ -128,6 +159,29 @@
 3. Есть связь `(:Requirement)-[:APPLIES_TO_SEMESTER]->(:Semester {number: ...})`.
 
 Именно поэтому важны не только поля правила, но и связи в графе.
+
+### 5.2.1 Контракт `condition_json` (что реально понимает текущий rule-engine)
+Сейчас поддерживаются 2 типа условий:
+
+1. `required_section`
+```json
+{
+  "type": "required_section",
+  "section": "introduction",
+  "min_occurrences": 1
+}
+```
+
+2. `font_rule`
+```json
+{
+  "type": "font_rule",
+  "font_family": "Times New Roman",
+  "font_size": 14
+}
+```
+
+Если в `condition_json.type` будет другое значение, текущее ядро проверки его пропустит (без падения процесса), пока не будет добавлен соответствующий обработчик в pipeline.
 
 ### 5.3 Как сейчас идет сама проверка требований
 `check_requirements(parsed_document, requirements)` применяет rule-engine к каждому правилу из Neo4j:
@@ -207,6 +261,37 @@ SET r.is_active = false;
 - `is_active = false`
 - нет связи к нужному `DocumentType`
 - нет связи к нужному `Semester`
+
+### 5.7 Как именно pipeline пишет данные в БЗ (технически)
+В рабочем коде состояние анализа хранится не только в памяти, а по шагам фиксируется в Neo4j.
+
+Последовательность записи:
+1. `POST /analyses/start` вызывает `create_analysis_check.cypher`:
+- создаётся/обновляется `(:Check {check_id})`;
+- ставится `status=ANALYZING`, `progress=10`;
+- создаётся связь `(:Check)-[:FOR_DOCUMENT]->(:Document)`.
+
+2. После определения типа и семестра вызывается `update_analysis_status.cypher`:
+- обновляются `check.status`, `check.progress`;
+- в `Check` записываются `document_type_code` и `semester_number`.
+
+3. После выбора правил вызывается `save_used_rule_codes.cypher`:
+- старые `[:USED_REQUIREMENT]` удаляются;
+- создаются новые связи `(:Check)-[:USED_REQUIREMENT]->(:Requirement)`.
+
+4. После проверки и построения отчёта вызывается `save_report_snapshot.cypher`:
+- создаётся `(:Report {report_id})`;
+- в `Report` сохраняются:
+`document_type_code`, `semester_number`, `overall_status`, `summary`;
+- массивы правил/нарушений/рекомендаций сохраняются в JSON-полях:
+`applied_rules_json`, `violations_json`, `recommendations_json`;
+- создаётся связь `(:Report)-[:FOR_CHECK]->(:Check)`.
+
+5. В финале снова вызывается `update_analysis_status.cypher`:
+- `status=REPORT_READY`, `progress=100`, `finished_at`.
+
+6. Если на любом этапе исключение:
+- `status=ERROR`, `progress=100`, `error` пишется в `Check`.
 
 ---
 
@@ -297,6 +382,41 @@ Neo4j выбрана потому что в проекте много связе
 6. `CorrectionCase -[:RELATES_TO_TYPE]-> DocumentType` (если найден)
 7. `CorrectionCase -[:RELATES_TO_SEMESTER]-> Semester` (если найден)
 
+### 8.1 Как используется БЗ в блоке правок преподавателя
+После `POST /feedback/corrections` backend:
+1. Читает `Report` по `check_id`.
+2. Строит `doc_features` из отчёта (тип, семестр, список правил, список нарушений).
+3. Загружает похожие кейсы из Neo4j (`get_similar_correction_cases.cypher`) с фильтром по `final_type` и `final_semester`.
+4. Сохраняет новый `CorrectionCase` в Neo4j (`save_correction_case.cypher`) вместе с:
+- `predicted_*` (что было в отчёте),
+- `final_*` (что подтвердил/исправил преподаватель),
+- `teacher_comment`,
+- JSON-структурами нарушений до/после.
+
+Если AI-провайдер настроен:
+1. В AI отправляется `doc_features` + похожие кейсы.
+2. Ответ парсится в строгий JSON-контракт.
+3. При ошибке AI backend не падает: возвращается `ai_mode=RULE_ONLY`.
+
+### 8.2 Как технически инициализируется БЗ из файлов проекта
+Инициализация графа выполнена в `backend/app/infrastructure/neo4j/graph_initializer.py` и запускается:
+1. автоматически при старте API (если `NEO4J_INIT_ON_STARTUP=true` и заполнены `NEO4J_*`), или
+2. вручную командой `python -m app.infrastructure.neo4j.init_graph`.
+
+Порядок применения фиксированный:
+1. `neo4j/schema/constraints.cypher`
+2. `neo4j/schema/indexes.cypher`
+3. `neo4j/data/seed_document_types.cypher`
+4. `neo4j/data/seed_semesters.cypher`
+5. `neo4j/data/seed_requirements.cypher`
+
+Как читаются `.cypher` файлы:
+1. Парсер `CypherFileLoader` убирает пустые строки и комментарии `//`.
+2. Файл разбивается на отдельные выражения по `;`.
+3. Каждое выражение выполняется последовательно в Neo4j-сессии.
+
+Практическое следствие: в seed-файлах каждое Cypher-выражение должно заканчиваться `;`.
+
 ---
 
 ## 9) Интерфейс: 5 вкладок и зачем каждая
@@ -372,41 +492,94 @@ CourseProject/
 
 ## 11) Как запустить локально
 
-### Шаг 1. Neo4j
-В репозитории нет `docker-compose.yml`, поэтому Neo4j можно поднять любым способом:
+### 11.1 Зависимости (что должно быть установлено)
+1. Python `3.12+`
+2. Node.js `20+` и npm
+3. Docker Desktop (если поднимаете Neo4j в контейнере)
 
-1. Neo4j Desktop / Aura
-2. или Docker вручную, например:
+### 11.2 Neo4j через Docker (рекомендуется)
+В репозитории нет `docker-compose.yml`, поэтому поднимаем контейнер вручную.
 
 ```bash
-docker run --name neo4j-courseproject \
-  -p 7474:7474 -p 7687:7687 \
-  -e NEO4J_AUTH=neo4j/your_password \
-  -d neo4j:5
+docker run --name neo4j-courseproject -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/your_password -v neo4j_courseproject_data:/data -d neo4j:5
 ```
 
-### Шаг 2. Backend
+Пояснения:
+1. `7474` — Neo4j Browser.
+2. `7687` — Bolt для backend.
+3. volume `neo4j_courseproject_data` сохраняет БД между перезапусками.
 
+Проверка:
+```bash
+docker ps
+```
+
+### 11.3 Конфиг backend
+Создайте `.env` из шаблона:
+
+PowerShell:
+```powershell
+cd backend
+Copy-Item .env.example .env
+```
+
+Bash:
 ```bash
 cd backend
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-copy .env.example .env
-uvicorn app.main:app --reload
+cp .env.example .env
 ```
 
-Проверьте `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD` в `.env`.
+Минимально проверьте в `.env`:
+1. `NEO4J_URI=bolt://localhost:7687`
+2. `NEO4J_USER=neo4j`
+3. `NEO4J_PASSWORD=your_password`
+4. `NEO4J_INIT_ON_STARTUP=true`
+5. `NEO4J_ASSETS_PATH=../neo4j`
 
-### Шаг 3. Frontend
+### 11.4 Запуск backend
+PowerShell:
+```powershell
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
 
+Bash:
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Как инициализируется БЗ:
+1. При старте API, если `NEO4J_INIT_ON_STARTUP=true`, backend применяет:
+`neo4j/schema/constraints.cypher`, `neo4j/schema/indexes.cypher`, затем `neo4j/data/*.cypher`.
+2. Если нужно вручную:
+```bash
+cd backend
+python -m app.infrastructure.neo4j.init_graph
+```
+
+### 11.5 Запуск frontend
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-По умолчанию frontend проксирует `/api` на `http://127.0.0.1:8000`.
+По умолчанию Vite проксирует `/api` на `http://127.0.0.1:8000` (`frontend/vite.config.ts`).
+
+### 11.6 Быстрый smoke-check после запуска
+1. Откройте `http://127.0.0.1:5173`.
+2. На вкладке `Загрузить` отправьте `PDF/DOCX`.
+3. На вкладке `Анализ` дождитесь `REPORT_READY`.
+4. На вкладке `Отчёт` проверьте `overall_status`, правила, нарушения.
+5. На вкладке `Правки` отправьте correction case.
+6. На вкладке `Правила` проверьте трассировку применённых правил.
 
 ---
 
@@ -460,3 +633,46 @@ Neo4j:
 Система уже даёт сквозной сценарий `upload -> analysis -> report -> feedback -> rules` с сохранением данных в Neo4j и понятным UI.
 
 Текущая реализация уже включает рабочий разбор PDF/DOCX, базовый rule-engine и полностью доступный пользовательский поток в UI.
+
+---
+## 15) Команды запуска (коротко, в самом конце)
+
+### Зависимости
+1. Python `3.12+`
+2. Node.js `20+`
+3. Docker Desktop (для Neo4j)
+
+### 1) Поднять Neo4j
+```bash
+docker run --name neo4j-courseproject -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/your_password -v neo4j_courseproject_data:/data -d neo4j:5
+```
+
+### 2) Backend
+PowerShell:
+```powershell
+cd backend
+Copy-Item .env.example .env
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+
+### 3) Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### 4) Проверка
+1. API health: `GET http://127.0.0.1:8000/api/v1/health`
+2. UI: `http://127.0.0.1:5173`
+
+### 5) Полезно для диагностики
+```bash
+cd backend
+python -m app.infrastructure.neo4j.init_graph
+python -m pytest app/tests -q
+```
