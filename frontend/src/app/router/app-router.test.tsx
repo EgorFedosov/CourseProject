@@ -20,11 +20,11 @@ describe('App routing', () => {
   })
 
   const routeCases: Array<{ path: string; heading: string }> = [
-    { path: '/upload', heading: 'UploadPage' },
-    { path: '/analysis', heading: 'AnalysisPage' },
-    { path: '/report', heading: 'ReportPage' },
-    { path: '/feedback', heading: 'FeedbackPage' },
-    { path: '/rules', heading: 'RulesViewPage' },
+    { path: '/upload', heading: 'Загрузка документа' },
+    { path: '/analysis', heading: 'Проверка документа' },
+    { path: '/report', heading: 'Отчёт' },
+    { path: '/feedback', heading: 'Правки' },
+    { path: '/rules', heading: 'Правила' },
   ]
 
   it.each(routeCases)('renders $path route', ({ path, heading }) => {
@@ -38,18 +38,18 @@ describe('App routing', () => {
     window.history.pushState({}, '', '/upload')
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: 'UploadPage' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Загрузка документа' })).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('link', { name: 'Analysis' }))
-    expect(screen.getByRole('heading', { name: 'AnalysisPage' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('link', { name: 'Анализ' }))
+    expect(screen.getByRole('heading', { name: 'Проверка документа' })).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('link', { name: 'Report' }))
-    expect(screen.getByRole('heading', { name: 'ReportPage' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('link', { name: 'Отчёт' }))
+    expect(screen.getByRole('heading', { name: 'Отчёт' })).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('link', { name: 'Feedback' }))
-    expect(screen.getByRole('heading', { name: 'FeedbackPage' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('link', { name: 'Правки' }))
+    expect(screen.getByRole('heading', { name: 'Правки' })).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('link', { name: 'Rules' }))
-    expect(screen.getByRole('heading', { name: 'RulesViewPage' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('link', { name: 'Правила' }))
+    expect(screen.getByRole('heading', { name: 'Правила' })).toBeInTheDocument()
   })
 })

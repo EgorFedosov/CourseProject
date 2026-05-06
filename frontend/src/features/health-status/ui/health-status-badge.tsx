@@ -13,18 +13,16 @@ export const HealthStatusBadge = () => {
     return (
       <div className="health-badge" aria-live="polite">
         <StatusDot tone="warning" />
-        <span>Backend status: checking...</span>
+        <span>Проверка сервера...</span>
       </div>
     )
   }
 
   if (healthQuery.error) {
-    const error = healthQuery.error instanceof ApiClientError ? healthQuery.error.message : 'Health check failed'
-
     return (
       <div className="health-badge" aria-live="polite">
         <StatusDot tone="error" />
-        <span>Backend status: {error}</span>
+        <span>Сервер недоступен</span>
         <button
           type="button"
           className="health-badge__retry"
@@ -32,7 +30,7 @@ export const HealthStatusBadge = () => {
             void healthQuery.refetch()
           }}
         >
-          Retry
+          Повторить
         </button>
       </div>
     )
@@ -42,20 +40,15 @@ export const HealthStatusBadge = () => {
     return (
       <div className="health-badge" aria-live="polite">
         <StatusDot tone="warning" />
-        <span>Backend status: unavailable</span>
+        <span>Сервер недоступен</span>
       </div>
     )
   }
 
-  const tone = resolveHealthTone(healthQuery.data.api_status, healthQuery.data.neo4j_status)
-
   return (
     <div className="health-badge" aria-live="polite">
-      <StatusDot tone={tone} />
-      <span>
-        Backend: {healthQuery.data.api_status} | Neo4j: {healthQuery.data.neo4j_status}
-        {healthQuery.data.ai_status ? ` | AI: ${healthQuery.data.ai_status}` : ''}
-      </span>
+      <StatusDot tone="success" />
+      <span>Сервер в норме</span>
     </div>
   )
 }

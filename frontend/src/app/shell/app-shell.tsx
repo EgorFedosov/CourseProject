@@ -1,7 +1,6 @@
 ﻿import { NavLink, Outlet } from 'react-router-dom'
 import { navigationRoutes } from '../../entities/navigation/model/navigation-routes'
 import { HealthStatusBadge } from '../../features/health-status/ui/health-status-badge'
-import { NotificationsPanel } from '../../shared/ui/notifications-panel'
 
 const navClassName = ({ isActive }: { isActive: boolean }) =>
   isActive ? 'app-nav__link app-nav__link--active' : 'app-nav__link'
@@ -11,9 +10,9 @@ export const AppShell = () => {
     <div className="app-shell">
       <header className="app-header">
         <div className="app-header__content">
-          <div>
-            <p className="app-header__kicker">CourseProject</p>
+          <div className="app-header__hero">
             <h1>Intelligent Document Checker</h1>
+            <p>Автоматическая проверка документов на соответствие требованиям.</p>
             <HealthStatusBadge />
           </div>
           <nav className="app-nav" aria-label="Основная навигация">
@@ -30,9 +29,6 @@ export const AppShell = () => {
         <main className="app-main" aria-live="polite">
           <Outlet />
         </main>
-        <aside className="app-aside">
-          <NotificationsPanel />
-        </aside>
       </div>
     </div>
   )

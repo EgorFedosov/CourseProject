@@ -76,7 +76,7 @@ describe('StartAnalysisOverview', () => {
 
     renderFeature()
 
-    fireEvent.change(screen.getByLabelText('document_id'), {
+    fireEvent.change(screen.getByLabelText('ID документа'), {
       target: { value: 'doc-77' },
     })
 
@@ -86,7 +86,7 @@ describe('StartAnalysisOverview', () => {
       expect(screen.getByText('Отчёт готов')).toBeInTheDocument()
     })
 
-    expect(screen.getByRole('link', { name: 'Перейти к ReportPage' })).toHaveAttribute('href', '/report?check_id=check-ready')
+    expect(screen.getByRole('link', { name: 'Открыть отчёт' })).toHaveAttribute('href', '/report?check_id=check-ready')
   })
 
   it('handles ERROR status with recoverable state', async () => {
@@ -122,7 +122,7 @@ describe('StartAnalysisOverview', () => {
 
     renderFeature()
 
-    fireEvent.change(screen.getByLabelText('document_id'), {
+    fireEvent.change(screen.getByLabelText('ID документа'), {
       target: { value: 'doc-99' },
     })
 
@@ -133,7 +133,7 @@ describe('StartAnalysisOverview', () => {
       expect(screen.getByText('AI provider unavailable')).toBeInTheDocument()
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Повторить запрос статуса' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Повторить' }))
     expect(refetch).toHaveBeenCalledTimes(1)
   })
 })

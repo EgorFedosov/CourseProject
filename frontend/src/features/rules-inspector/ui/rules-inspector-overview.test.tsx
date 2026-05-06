@@ -63,9 +63,9 @@ describe('RulesInspectorOverview', () => {
 
     renderFeature()
 
-    expect(screen.getByRole('heading', { name: 'Endpoint Coverage UI' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Применённые правила' })).toBeInTheDocument()
 
-    fireEvent.change(screen.getByLabelText('check_id'), {
+    fireEvent.change(screen.getByLabelText('ID проверки'), {
       target: { value: 'check-101' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Показать правила' }))
@@ -75,8 +75,8 @@ describe('RulesInspectorOverview', () => {
       expect(screen.getByText('RULE-2')).toBeInTheDocument()
     })
 
-    expect(screen.getByText('satisfied')).toBeInTheDocument()
-    expect(screen.getByText('violation found')).toBeInTheDocument()
+    expect(screen.getByText('Без нарушений')).toBeInTheDocument()
+    expect(screen.getByText('Есть нарушение')).toBeInTheDocument()
     expect(screen.getByText('Section is missing')).toBeInTheDocument()
     expect(screen.getByText('RULE-9')).toBeInTheDocument()
   })
@@ -104,7 +104,7 @@ describe('RulesInspectorOverview', () => {
 
     renderFeature()
 
-    fireEvent.change(screen.getByLabelText('check_id'), {
+    fireEvent.change(screen.getByLabelText('ID проверки'), {
       target: { value: 'bad-check' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Показать правила' }))

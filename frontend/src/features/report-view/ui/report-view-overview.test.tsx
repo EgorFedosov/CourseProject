@@ -65,21 +65,21 @@ describe('ReportViewOverview', () => {
 
     renderFeature()
 
-    fireEvent.change(screen.getByLabelText('check_id'), {
+    fireEvent.change(screen.getByLabelText('ID проверки'), {
       target: { value: 'check-500' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Загрузить отчёт' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Показать отчёт' }))
 
     await waitFor(() => {
-      expect(screen.getByText('overall_status: REPORT_READY')).toBeInTheDocument()
+      expect(screen.getByText('Статус: Готов')).toBeInTheDocument()
     })
 
-    expect(screen.getByText('determined_type: LAB_REPORT')).toBeInTheDocument()
-    expect(screen.getByText('violations: 1')).toBeInTheDocument()
-    expect(screen.getByText('Отчёт неполный: отсутствуют поля determined_semester.')).toBeInTheDocument()
+    expect(screen.getByText('Тип документа: LAB_REPORT')).toBeInTheDocument()
+    expect(screen.getByText('Нарушений: 1')).toBeInTheDocument()
+    expect(screen.getByText('Отчёт неполный: отсутствуют поля семестр.')).toBeInTheDocument()
 
-    expect(screen.getByRole('link', { name: 'Открыть FeedbackPage' })).toHaveAttribute('href', '/feedback?check_id=check-500')
-    expect(screen.getByRole('link', { name: 'Открыть RulesViewPage' })).toHaveAttribute('href', '/rules?check_id=check-500')
+    expect(screen.getByRole('link', { name: 'Перейти к правкам' })).toHaveAttribute('href', '/feedback?check_id=check-500')
+    expect(screen.getByRole('link', { name: 'Перейти к правилам' })).toHaveAttribute('href', '/rules?check_id=check-500')
   })
 
   it('shows backend error and retry action', async () => {
@@ -111,10 +111,10 @@ describe('ReportViewOverview', () => {
 
     renderFeature()
 
-    fireEvent.change(screen.getByLabelText('check_id'), {
+    fireEvent.change(screen.getByLabelText('ID проверки'), {
       target: { value: 'bad-check' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Загрузить отчёт' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Показать отчёт' }))
 
     await waitFor(() => {
       expect(screen.getByText('Report endpoint failed')).toBeInTheDocument()

@@ -29,8 +29,8 @@ describe('HealthStatusBadge', () => {
 
     render(<HealthStatusBadge />)
 
-    expect(screen.getByText('Backend status: Network down')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(screen.getByText('Сервер недоступен')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Повторить' }))
     expect(mockRefetch).toHaveBeenCalledTimes(1)
   })
 })

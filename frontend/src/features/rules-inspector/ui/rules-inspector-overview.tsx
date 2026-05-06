@@ -49,12 +49,9 @@ export const RulesInspectorOverview = () => {
   const resolvedReportRoute = activeCheckId ? `/report?check_id=${encodeURIComponent(activeCheckId)}` : '/report'
 
   return (
-    <PageCard
-      title="RulesViewPage"
-      description="Экран трассировки applied_rules из GET /api/v1/reports/{check_id} и явного соответствия правилам/нарушениям."
-    >
+    <PageCard title="Правила" description="">
       <form className="rules-check-id-form" onSubmit={handleLoadRules}>
-        <label htmlFor="rules-check-id">check_id</label>
+        <label htmlFor="rules-check-id">ID проверки</label>
         <div className="rules-check-id-form__controls">
           <input
             id="rules-check-id"
@@ -62,7 +59,7 @@ export const RulesInspectorOverview = () => {
             type="text"
             value={checkIdInput}
             onChange={(event) => setCheckIdInput(event.target.value)}
-            placeholder="Введите check_id для трассировки правил"
+            placeholder="Введите ID проверки"
             autoComplete="off"
           />
           <button type="submit" disabled={reportQuery.isFetching}>
@@ -71,32 +68,25 @@ export const RulesInspectorOverview = () => {
         </div>
       </form>
 
-      <section className="rules-endpoint-coverage" aria-label="Endpoint coverage">
-        <h2>Endpoint Coverage UI</h2>
-        <ul>
-          <li>
-            <code>GET /api/v1/reports/{'{check_id}'}</code> - источник <code>applied_rules</code> и <code>violations</code>.
-          </li>
-          <li>
-            <code>/rules</code> - визуальная трассировка правила к evidence в отчете.
-          </li>
-        </ul>
+      <section className="rules-endpoint-coverage" aria-label="Информация">
+        <h2>Применённые правила</h2>
+        <p>Здесь показаны правила, которые были найдены в отчёте, и их статус.</p>
         <p>
-          Связанный flow отчёта:{' '}
-          <Link to={resolvedReportRoute}>перейти в ReportPage{activeCheckId ? ` (${activeCheckId})` : ''}</Link>
+          Связанный отчёт:{' '}
+          <Link to={resolvedReportRoute}>открыть отчёт{activeCheckId ? ` (${activeCheckId})` : ''}</Link>
         </p>
       </section>
 
       {!activeCheckId && !reportQuery.isFetching ? (
-        <StatePanel tone="empty" title="Ожидание check_id" message="Укажите check_id, чтобы загрузить applied_rules для трассировки." />
+        <StatePanel tone="empty" title="Введите ID проверки" message="Укажите ID проверки, чтобы загрузить информацию о правилах." />
       ) : null}
 
-      {reportQuery.isFetching ? <StatePanel tone="loading" title="Загрузка правил" message="Получаем applied_rules и violations из backend отчёта." /> : null}
+      {reportQuery.isFetching ? <StatePanel tone="loading" title="Загрузка правил" message="Получаем данные о правилах и нарушениях." /> : null}
 
       {reportQuery.error ? (
         <StatePanel
           tone="error"
-          title="Ошибка загрузки правил"
+          title="Ошибка загрузки"
           message={formatError(reportQuery.error, 'Не удалось получить данные отчёта.')}
           actionLabel="Повторить запрос"
           onAction={() => {
@@ -106,24 +96,24 @@ export const RulesInspectorOverview = () => {
       ) : null}
 
       {reportQuery.data ? (
-        <section className="rules-trace" aria-label="Трассировка правил">
-          <h2>Трассировка правил</h2>
+        <section className="rules-trace" aria-label="Состояние правил">
+          <h2>Состояние правил</h2>
           {tracedRules.length === 0 ? (
-            <StatePanel tone="empty" title="Пустой applied_rules" message="Backend вернул пустой список правил для выбранного check_id." />
+            <StatePanel tone="empty" title="Правил не найдено" message="В отчёте нет правил для выбранного ID проверки." />
           ) : (
             <ul>
               {tracedRules.map((rule) => (
                 <li key={rule.code} className={`rules-trace-item rules-trace-item--${rule.status}`}>
                   <header>
                     <strong>{rule.code}</strong>
-                    <span>{rule.status === 'violated' ? 'violation found' : 'satisfied'}</span>
+                    <span>{rule.status === 'violated' ? 'Есть нарушение' : 'Без нарушений'}</span>
                   </header>
-                  <p>title: {rule.title}</p>
-                  <p>category: {rule.category}</p>
-                  <p>severity: {rule.severity}</p>
+                  <p>Название: {rule.title}</p>
+                  <p>Категория: {rule.category}</p>
+                  <p>Серьёзность: {rule.severity}</p>
                   {rule.evidence.length > 0 ? (
                     <div>
-                      <p>evidence:</p>
+                      <p>Найдены доказательства:</p>
                       <ul>
                         {rule.evidence.map((message) => (
                           <li key={`${rule.code}-${message}`}>{message}</li>
@@ -131,7 +121,7 @@ export const RulesInspectorOverview = () => {
                       </ul>
                     </div>
                   ) : (
-                    <p>evidence: not found</p>
+                    <p>Доказательств не найдено</p>
                   )}
                 </li>
               ))}
@@ -140,7 +130,7 @@ export const RulesInspectorOverview = () => {
 
           {unmappedViolations.length > 0 ? (
             <div className="rules-warning">
-              <p>Есть нарушения без соответствующего applied_rule кода:</p>
+              <p>Найдены нарушения без сопоставленного правила:</p>
               <ul>
                 {unmappedViolations.map((code) => (
                   <li key={code}>{code}</li>

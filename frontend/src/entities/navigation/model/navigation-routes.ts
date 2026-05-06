@@ -7,27 +7,27 @@
 export const navigationRoutes: readonly NavigationRoute[] = [
   {
     path: '/upload',
-    label: 'Upload',
+    label: 'Загрузить',
     hint: 'Загрузка документа',
   },
   {
     path: '/analysis',
-    label: 'Analysis',
-    hint: 'Запуск и статусы проверки',
+    label: 'Анализ',
+    hint: 'Запуск проверки документа',
   },
   {
     path: '/report',
-    label: 'Report',
+    label: 'Отчёт',
     hint: 'Результаты проверки',
   },
   {
     path: '/feedback',
-    label: 'Feedback',
-    hint: 'Правки преподавателя',
+    label: 'Правки',
+    hint: 'Отправка правок преподавателя',
   },
   {
     path: '/rules',
-    label: 'Rules',
+    label: 'Правила',
     hint: 'Просмотр примененных требований',
   },
 ]

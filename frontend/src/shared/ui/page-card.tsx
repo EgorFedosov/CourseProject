@@ -2,7 +2,7 @@
 
 interface PageCardProps {
   title: string
-  description: string
+  description?: string
   children?: ReactNode
 }
 
@@ -11,7 +11,7 @@ export const PageCard = ({ title, description, children }: PageCardProps) => {
     <section className="page-card">
       <header className="page-card__header">
         <h1>{title}</h1>
-        <p>{description}</p>
+        {description ? <p>{description}</p> : null}
       </header>
       {children ? <div className="page-card__body">{children}</div> : null}
     </section>

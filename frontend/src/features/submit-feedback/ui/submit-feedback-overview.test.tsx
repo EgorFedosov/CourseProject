@@ -84,17 +84,24 @@ describe('SubmitFeedbackOverview', () => {
 
     renderFeature()
 
-    fireEvent.change(screen.getByLabelText('check_id'), {
+    fireEvent.change(screen.getByLabelText('ID проверки'), {
       target: { value: 'check-42' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Загрузить отчёт' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Загрузить данные' }))
+
+    fireEvent.change(screen.getByLabelText('Тип документа'), {
+      target: { value: 'LAB_REPORT' },
+    })
+    fireEvent.change(screen.getByLabelText('Семестр'), {
+      target: { value: '4' },
+    })
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('LAB_REPORT')).toBeInTheDocument()
       expect(screen.getByDisplayValue('4')).toBeInTheDocument()
     })
 
-    fireEvent.change(screen.getByLabelText('teacher_comment'), {
+    fireEvent.change(screen.getByDisplayValue(''), {
       target: { value: 'Подтверждаю замечание.' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Отправить правки' }))
@@ -153,22 +160,22 @@ describe('SubmitFeedbackOverview', () => {
 
     renderFeature()
 
-    fireEvent.change(screen.getByLabelText('check_id'), {
+    fireEvent.change(screen.getByLabelText('ID проверки'), {
       target: { value: 'check-77' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Загрузить отчёт' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Загрузить данные' }))
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Отправить правки' })).toBeEnabled()
     })
 
-    fireEvent.change(screen.getByLabelText('final_type'), {
+    fireEvent.change(screen.getByLabelText('Тип документа'), {
       target: { value: 'MANUAL_OVERRIDE' },
     })
-    fireEvent.change(screen.getByLabelText('final_semester'), {
+    fireEvent.change(screen.getByLabelText('Семестр'), {
       target: { value: '6' },
     })
-    fireEvent.change(screen.getByLabelText('teacher_comment'), {
+    fireEvent.change(screen.getByLabelText('Комментарий преподавателя'), {
       target: { value: 'Требуется ручная проверка.' },
     })
 

@@ -63,7 +63,11 @@ describe('UploadDocumentOverview', () => {
       expect(mockMutateAsync).toHaveBeenCalledTimes(1)
     })
 
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: 'Перейти к анализу' })).toBeInTheDocument()
+    })
+
     expect(screen.getByText('Документ загружен')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Перейти к AnalysisPage' })).toHaveAttribute('href', '/analysis?document_id=doc-1')
+    expect(screen.getByRole('link', { name: 'Перейти к анализу' })).toHaveAttribute('href', '/analysis?document_id=doc-1')
   })
 })
