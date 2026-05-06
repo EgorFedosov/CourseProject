@@ -1,5 +1,6 @@
-﻿import { type FormEvent, useMemo, useState } from 'react'
+﻿import { type FormEvent, useEffect, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { useTabsState } from '../../../app/providers/tabs-state-provider'
 import { ApiClientError } from '../../../shared/api/error'
 import { useAnalysisStatusQuery } from '../../../shared/api/hooks/use-analysis-status-query'
 import { useStartAnalysisMutation } from '../../../shared/api/hooks/use-start-analysis-mutation'
@@ -45,16 +46,45 @@ const getPipelineStages = (status?: string): Array<{ id: string; name: string; a
 
 export const StartAnalysisOverview = () => {
   const [searchParams, setSearchParams] = useSearchParams()
-  const [documentId, setDocumentId] = useState(() => resolveParam(searchParams, 'document_id'))
-  const [requestedBy, setRequestedBy] = useState('teacher@course.local')
-  const [activeCheckId, setActiveCheckId] = useState<string | null>(() => {
-    const restored = resolveParam(searchParams, 'check_id')
-    return restored.length > 0 ? restored : null
-  })
-  const [startError, setStartError] = useState<string | null>(null)
+  const {
+    analysis,
+    setAnalysis,
+    lastDocumentId,
+    lastCheckId,
+    setLastCheckId,
+  } = useTabsState()
+  const { documentId, requestedBy, activeCheckId, startError } = analysis
 
   const startMutation = useStartAnalysisMutation()
   const statusQuery = useAnalysisStatusQuery(activeCheckId)
+
+  useEffect(() => {
+    const restoredDocumentId = resolveParam(searchParams, 'document_id')
+    const restoredCheckId = resolveParam(searchParams, 'check_id')
+
+    setAnalysis((current) => {
+      let changed = false
+      let next = current
+
+      if (current.documentId.length === 0) {
+        const fallbackDocumentId = restoredDocumentId || lastDocumentId || ''
+        if (fallbackDocumentId.length > 0) {
+          next = { ...next, documentId: fallbackDocumentId }
+          changed = true
+        }
+      }
+
+      if (!current.activeCheckId) {
+        const fallbackCheckId = restoredCheckId || lastCheckId
+        if (fallbackCheckId) {
+          next = { ...next, activeCheckId: fallbackCheckId }
+          changed = true
+        }
+      }
+
+      return changed ? next : current
+    })
+  }, [lastCheckId, lastDocumentId, searchParams, setAnalysis])
 
   // UX-only change: compute pipeline stages based on status
   const pipelineStages = useMemo(
@@ -71,11 +101,14 @@ export const StartAnalysisOverview = () => {
     const normalizedRequestedBy = requestedBy.trim()
 
     if (normalizedDocumentId.length === 0 || normalizedRequestedBy.length === 0) {
-      setStartError('Укажите document_id и requested_by перед запуском анализа.')
+      setAnalysis((current) => ({
+        ...current,
+        startError: 'Укажите document_id и requested_by перед запуском анализа.',
+      }))
       return
     }
 
-    setStartError(null)
+    setAnalysis((current) => ({ ...current, startError: null }))
 
     try {
       const response = await startMutation.mutateAsync({
@@ -83,13 +116,23 @@ export const StartAnalysisOverview = () => {
         requested_by: normalizedRequestedBy,
       })
 
-      setActiveCheckId(response.check_id)
+      setAnalysis((current) => ({
+        ...current,
+        documentId: normalizedDocumentId,
+        requestedBy: normalizedRequestedBy,
+        activeCheckId: response.check_id,
+        startError: null,
+      }))
+      setLastCheckId(response.check_id)
       setSearchParams({
         document_id: normalizedDocumentId,
         check_id: response.check_id,
       })
     } catch (error) {
-      setStartError(formatError(error, 'Не удалось запустить анализ.'))
+      setAnalysis((current) => ({
+        ...current,
+        startError: formatError(error, 'Не удалось запустить анализ.'),
+      }))
     }
   }
 
@@ -111,7 +154,7 @@ export const StartAnalysisOverview = () => {
               id="analysis-document-id"
               type="text"
               value={documentId}
-              onChange={(event) => setDocumentId(event.target.value)}
+              onChange={(event) => setAnalysis((current) => ({ ...current, documentId: event.target.value }))}
               placeholder="Введите ID документа"
               autoComplete="off"
             />
@@ -121,7 +164,7 @@ export const StartAnalysisOverview = () => {
               id="analysis-requested-by"
               type="text"
               value={requestedBy}
-              onChange={(event) => setRequestedBy(event.target.value)}
+              onChange={(event) => setAnalysis((current) => ({ ...current, requestedBy: event.target.value }))}
               placeholder="Например, ваш email"
               autoComplete="off"
             />
@@ -187,7 +230,7 @@ export const StartAnalysisOverview = () => {
                   className={`analysis-pipeline__stage ${stage.completed ? 'analysis-pipeline__stage--completed' : ''} ${stage.active ? 'analysis-pipeline__stage--active' : ''}`}
                 >
                   <div className="analysis-pipeline__stage-icon">
-                    {stage.completed ? '✓' : stage.active ? '⟳' : '·'}
+                    {stage.completed ? '✓' : stage.active ? '●' : '○'}
                   </div>
                   <div className="analysis-pipeline__stage-label">{stage.name}</div>
                 </div>
@@ -217,3 +260,4 @@ export const StartAnalysisOverview = () => {
     </PageCard>
   )
 }
+

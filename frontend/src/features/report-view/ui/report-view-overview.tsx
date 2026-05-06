@@ -1,5 +1,6 @@
-﻿import { type FormEvent, useMemo, useState } from 'react'
+﻿import { type FormEvent, useEffect, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { useTabsState } from '../../../app/providers/tabs-state-provider'
 import { ApiClientError } from '../../../shared/api/error'
 import { useReportQuery } from '../../../shared/api/hooks/use-report-query'
 import { PageCard } from '../../../shared/ui/page-card'
@@ -38,13 +39,42 @@ const formatOverallStatus = (status: string): { text: string; tone: 'success' | 
 
 export const ReportViewOverview = () => {
   const [searchParams, setSearchParams] = useSearchParams()
-  const [checkIdInput, setCheckIdInput] = useState(() => resolveCheckId(searchParams))
-  const [activeCheckId, setActiveCheckId] = useState<string | null>(() => {
-    const initial = resolveCheckId(searchParams)
-    return initial.length > 0 ? initial : null
-  })
+  const {
+    report,
+    setReport,
+    lastCheckId,
+    setLastCheckId,
+  } = useTabsState()
+  const { checkIdInput, activeCheckId } = report
 
   const reportQuery = useReportQuery(activeCheckId)
+
+  useEffect(() => {
+    const restoredCheckId = resolveCheckId(searchParams)
+
+    setReport((current) => {
+      let changed = false
+      let next = current
+
+      if (current.checkIdInput.trim().length === 0) {
+        const fallbackInput = restoredCheckId || lastCheckId || ''
+        if (fallbackInput.length > 0) {
+          next = { ...next, checkIdInput: fallbackInput }
+          changed = true
+        }
+      }
+
+      if (!current.activeCheckId) {
+        const fallbackCheckId = restoredCheckId || lastCheckId
+        if (fallbackCheckId) {
+          next = { ...next, activeCheckId: fallbackCheckId }
+          changed = true
+        }
+      }
+
+      return changed ? next : current
+    })
+  }, [lastCheckId, searchParams, setReport])
 
   const submitCheckId = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -54,7 +84,12 @@ export const ReportViewOverview = () => {
       return
     }
 
-    setActiveCheckId(normalized)
+    setReport((current) => ({
+      ...current,
+      checkIdInput: normalized,
+      activeCheckId: normalized,
+    }))
+    setLastCheckId(normalized)
     setSearchParams({ check_id: normalized })
   }
 
@@ -91,7 +126,7 @@ export const ReportViewOverview = () => {
             id="report-check-id"
             type="text"
             value={checkIdInput}
-            onChange={(event) => setCheckIdInput(event.target.value)}
+            onChange={(event) => setReport((current) => ({ ...current, checkIdInput: event.target.value }))}
             placeholder="Введите ID проверки"
             autoComplete="off"
           />
@@ -128,7 +163,7 @@ export const ReportViewOverview = () => {
             {/* Overall status as dominant visual element */}
             <div className={`report-summary__status report-summary__status--${overallStatusInfo?.tone}`}>
               <span className="report-summary__status-icon">
-                {overallStatusInfo?.tone === 'success' ? '✓' : overallStatusInfo?.tone === 'error' ? '✕' : '!'}
+                {overallStatusInfo?.tone === 'success' ? '✓' : overallStatusInfo?.tone === 'error' ? '×' : '!'}
               </span>
               <div>
                 <strong className="report-summary__status-text">{overallStatusInfo?.text}</strong>
@@ -172,7 +207,7 @@ export const ReportViewOverview = () => {
               </div>
             ) : (
               <div className="report-summary__no-issues">
-                <strong>Все проверки пройдены ✓</strong>
+                <strong>Все проверки пройдены</strong>
                 <span>Нарушений и рекомендаций не найдено</span>
               </div>
             )}
@@ -183,10 +218,10 @@ export const ReportViewOverview = () => {
             <h3>Следующие шаги</h3>
             <div className="report-linked-flows__actions">
               <Link to={feedbackRoute} className="report-linked-flows__link">
-                📝 Перейти к правкам
+                Перейти к правкам
               </Link>
               <Link to={rulesRoute} className="report-linked-flows__link">
-                📖 Посмотреть правила
+                Перейти к правилам
               </Link>
             </div>
           </section>
@@ -195,3 +230,4 @@ export const ReportViewOverview = () => {
     </PageCard>
   )
 }
+

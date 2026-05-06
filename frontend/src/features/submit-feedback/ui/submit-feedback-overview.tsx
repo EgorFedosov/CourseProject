@@ -1,5 +1,6 @@
-﻿import { type FormEvent, useState } from 'react'
+﻿import { type FormEvent, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useTabsState } from '../../../app/providers/tabs-state-provider'
 import { ApiClientError } from '../../../shared/api/error'
 import { useReportQuery } from '../../../shared/api/hooks/use-report-query'
 import { useSubmitFeedbackMutation } from '../../../shared/api/hooks/use-submit-feedback-mutation'
@@ -22,22 +23,53 @@ const formatError = (error: unknown, fallbackMessage: string): string => {
 
 export const SubmitFeedbackOverview = () => {
   const [searchParams, setSearchParams] = useSearchParams()
-  const [checkIdInput, setCheckIdInput] = useState(() => resolveCheckId(searchParams))
-  const [activeCheckId, setActiveCheckId] = useState<string | null>(() => {
-    const initialCheckId = resolveCheckId(searchParams)
-    return initialCheckId.length > 0 ? initialCheckId : null
-  })
+  const {
+    feedback,
+    setFeedback,
+    lastCheckId,
+    setLastCheckId,
+  } = useTabsState()
+
+  const {
+    checkIdInput,
+    activeCheckId,
+    finalType,
+    finalSemester,
+    teacherComment,
+    violationDecisions,
+    formError,
+    submitResult,
+  } = feedback
 
   const reportQuery = useReportQuery(activeCheckId)
   const submitMutation = useSubmitFeedbackMutation()
 
-  const [finalType, setFinalType] = useState('')
-  const [finalSemester, setFinalSemester] = useState('')
-  const [teacherComment, setTeacherComment] = useState('')
-  const [violationDecisions, setViolationDecisions] = useState<ViolationDecisionMap>({})
+  useEffect(() => {
+    const restoredCheckId = resolveCheckId(searchParams)
 
-  const [formError, setFormError] = useState<string | null>(null)
-  const [submitResult, setSubmitResult] = useState<string | null>(null)
+    setFeedback((current) => {
+      let changed = false
+      let next = current
+
+      if (current.checkIdInput.trim().length === 0) {
+        const fallbackInput = restoredCheckId || lastCheckId || ''
+        if (fallbackInput.length > 0) {
+          next = { ...next, checkIdInput: fallbackInput }
+          changed = true
+        }
+      }
+
+      if (!current.activeCheckId) {
+        const fallbackCheckId = restoredCheckId || lastCheckId
+        if (fallbackCheckId) {
+          next = { ...next, activeCheckId: fallbackCheckId }
+          changed = true
+        }
+      }
+
+      return changed ? next : current
+    })
+  }, [lastCheckId, searchParams, setFeedback])
 
   const resolvedFinalType = finalType.trim().length > 0 ? finalType : (reportQuery.data?.determined_type ?? '')
   const resolvedFinalSemester =
@@ -50,21 +82,30 @@ export const SubmitFeedbackOverview = () => {
 
     const normalizedCheckId = checkIdInput.trim()
     if (normalizedCheckId.length === 0) {
-      setFormError('Укажите ID проверки для загрузки отчёта.')
+      setFeedback((current) => ({
+        ...current,
+        formError: 'Укажите ID проверки для загрузки отчёта.',
+      }))
       return
     }
 
-    setFormError(null)
-    setSubmitResult(null)
+    setFeedback((current) => {
+      const shouldResetForm = normalizedCheckId !== current.activeCheckId
 
-    if (normalizedCheckId !== activeCheckId) {
-      setFinalType('')
-      setFinalSemester('')
-      setTeacherComment('')
-      setViolationDecisions({})
-    }
+      return {
+        ...current,
+        formError: null,
+        submitResult: null,
+        activeCheckId: normalizedCheckId,
+        checkIdInput: normalizedCheckId,
+        finalType: shouldResetForm ? '' : current.finalType,
+        finalSemester: shouldResetForm ? '' : current.finalSemester,
+        teacherComment: shouldResetForm ? '' : current.teacherComment,
+        violationDecisions: shouldResetForm ? {} : current.violationDecisions,
+      }
+    })
 
-    setActiveCheckId(normalizedCheckId)
+    setLastCheckId(normalizedCheckId)
     setSearchParams({ check_id: normalizedCheckId })
   }
 
@@ -75,8 +116,11 @@ export const SubmitFeedbackOverview = () => {
       return
     }
 
-    setFormError(null)
-    setSubmitResult(null)
+    setFeedback((current) => ({
+      ...current,
+      formError: null,
+      submitResult: null,
+    }))
 
     const payloadResult = buildFeedbackPayload(
       {
@@ -86,11 +130,14 @@ export const SubmitFeedbackOverview = () => {
         teacherComment,
       },
       reportQuery.data,
-      violationDecisions,
+      violationDecisions as ViolationDecisionMap,
     )
 
     if (!payloadResult.success || !payloadResult.payload) {
-      setFormError(payloadResult.message ?? 'Форма не прошла валидацию.')
+      setFeedback((current) => ({
+        ...current,
+        formError: payloadResult.message ?? 'Форма не прошла валидацию.',
+      }))
       return
     }
 
@@ -106,9 +153,15 @@ export const SubmitFeedbackOverview = () => {
         details.push(`case_id: ${response.case_id}`)
       }
 
-      setSubmitResult(`Правки отправлены: ${details.join(' · ')}`)
+      setFeedback((current) => ({
+        ...current,
+        submitResult: `Правки отправлены: ${details.join(' · ')}`,
+      }))
     } catch (error) {
-      setFormError(formatError(error, 'Не удалось отправить правки.'))
+      setFeedback((current) => ({
+        ...current,
+        formError: formatError(error, 'Не удалось отправить правки.'),
+      }))
     }
   }
 
@@ -128,7 +181,7 @@ export const SubmitFeedbackOverview = () => {
             name="check_id"
             type="text"
             value={checkIdInput}
-            onChange={(event) => setCheckIdInput(event.target.value)}
+            onChange={(event) => setFeedback((current) => ({ ...current, checkIdInput: event.target.value }))}
             placeholder="Введите ID проверки"
             autoComplete="off"
           />
@@ -173,7 +226,7 @@ export const SubmitFeedbackOverview = () => {
                     name="final_type"
                     type="text"
                     value={resolvedFinalType}
-                    onChange={(event) => setFinalType(event.target.value)}
+                    onChange={(event) => setFeedback((current) => ({ ...current, finalType: event.target.value }))}
                     placeholder="Например: LAB_REPORT"
                     className="feedback-form__input"
                   />
@@ -188,7 +241,7 @@ export const SubmitFeedbackOverview = () => {
                     min={1}
                     step={1}
                     value={resolvedFinalSemester}
-                    onChange={(event) => setFinalSemester(event.target.value)}
+                    onChange={(event) => setFeedback((current) => ({ ...current, finalSemester: event.target.value }))}
                     placeholder="Например: 4"
                     className="feedback-form__input"
                   />
@@ -234,13 +287,16 @@ export const SubmitFeedbackOverview = () => {
                               value="confirmed"
                               checked={decision === 'confirmed'}
                               onChange={() =>
-                                setViolationDecisions((current) => ({
+                                setFeedback((current) => ({
                                   ...current,
-                                  [code]: 'confirmed',
+                                  violationDecisions: {
+                                    ...current.violationDecisions,
+                                    [code]: 'confirmed',
+                                  },
                                 }))
                               }
                             />
-                            <span>✓ Подтвердить</span>
+                            <span>Подтвердить</span>
                           </label>
                           <label className="feedback-violation-action">
                             <input
@@ -249,13 +305,16 @@ export const SubmitFeedbackOverview = () => {
                               value="rejected"
                               checked={decision === 'rejected'}
                               onChange={() =>
-                                setViolationDecisions((current) => ({
+                                setFeedback((current) => ({
                                   ...current,
-                                  [code]: 'rejected',
+                                  violationDecisions: {
+                                    ...current.violationDecisions,
+                                    [code]: 'rejected',
+                                  },
                                 }))
                               }
                             />
-                            <span>✕ Отклонить</span>
+                            <span>Отклонить</span>
                           </label>
                         </div>
                       </div>
@@ -274,7 +333,7 @@ export const SubmitFeedbackOverview = () => {
                   id="feedback-teacher-comment"
                   name="teacher_comment"
                   value={teacherComment}
-                  onChange={(event) => setTeacherComment(event.target.value)}
+                  onChange={(event) => setFeedback((current) => ({ ...current, teacherComment: event.target.value }))}
                   rows={4}
                   placeholder="Введите ваши замечания и рекомендации..."
                   className="feedback-form__textarea"
@@ -299,3 +358,4 @@ export const SubmitFeedbackOverview = () => {
     </PageCard>
   )
 }
+

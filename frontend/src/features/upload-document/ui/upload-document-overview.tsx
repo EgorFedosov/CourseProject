@@ -1,5 +1,6 @@
-﻿import { type FormEvent, type DragEvent, useState } from 'react'
+﻿import { type FormEvent, type DragEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { useTabsState } from '../../../app/providers/tabs-state-provider'
 import { ApiClientError } from '../../../shared/api/error'
 import { useUploadMutation } from '../../../shared/api/hooks/use-upload-mutation'
 import { PageCard } from '../../../shared/ui/page-card'
@@ -16,30 +17,31 @@ const formatError = (error: unknown): string => {
 
 export const UploadDocumentOverview = () => {
   const uploadMutation = useUploadMutation()
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [uploadResult, setUploadResult] = useState<{ documentId: string; filename: string } | null>(null)
-  const [dragActive, setDragActive] = useState(false)
+  const { upload, setUpload, setLastDocumentId } = useTabsState()
+  const { selectedFile, errorMessage, uploadResult, dragActive } = upload
 
   const handleDrag = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault()
     event.stopPropagation()
     if (event.type === 'dragenter' || event.type === 'dragover') {
-      setDragActive(true)
+      setUpload((current) => ({ ...current, dragActive: true }))
     } else if (event.type === 'dragleave') {
-      setDragActive(false)
+      setUpload((current) => ({ ...current, dragActive: false }))
     }
   }
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault()
     event.stopPropagation()
-    setDragActive(false)
+    setUpload((current) => ({ ...current, dragActive: false }))
 
     const file = event.dataTransfer.files?.[0]
     if (file) {
-      setSelectedFile(file)
-      setErrorMessage(null)
+      setUpload((current) => ({
+        ...current,
+        selectedFile: file,
+        errorMessage: null,
+      }))
     }
   }
 
@@ -51,21 +53,34 @@ export const UploadDocumentOverview = () => {
     }
 
     if (!selectedFile) {
-      setErrorMessage('Выберите PDF или DOCX перед отправкой.')
+      setUpload((current) => ({
+        ...current,
+        errorMessage: 'Выберите PDF или DOCX перед отправкой.',
+      }))
       return
     }
 
-    setErrorMessage(null)
-    setUploadResult(null)
+    setUpload((current) => ({
+      ...current,
+      errorMessage: null,
+      uploadResult: null,
+    }))
 
     try {
       const response = await uploadMutation.mutateAsync({ file: selectedFile })
-      setUploadResult({
-        documentId: response.document_id,
-        filename: response.filename,
-      })
+      setUpload((current) => ({
+        ...current,
+        uploadResult: {
+          documentId: response.document_id,
+          filename: response.filename,
+        },
+      }))
+      setLastDocumentId(response.document_id)
     } catch (error) {
-      setErrorMessage(formatError(error))
+      setUpload((current) => ({
+        ...current,
+        errorMessage: formatError(error),
+      }))
     }
   }
 
@@ -74,16 +89,26 @@ export const UploadDocumentOverview = () => {
       return
     }
 
-    setErrorMessage(null)
+    setUpload((current) => ({
+      ...current,
+      errorMessage: null,
+    }))
 
     try {
       const response = await uploadMutation.mutateAsync({ file: selectedFile })
-      setUploadResult({
-        documentId: response.document_id,
-        filename: response.filename,
-      })
+      setUpload((current) => ({
+        ...current,
+        uploadResult: {
+          documentId: response.document_id,
+          filename: response.filename,
+        },
+      }))
+      setLastDocumentId(response.document_id)
     } catch (error) {
-      setErrorMessage(formatError(error))
+      setUpload((current) => ({
+        ...current,
+        errorMessage: formatError(error),
+      }))
     }
   }
 
@@ -105,8 +130,11 @@ export const UploadDocumentOverview = () => {
             type="file"
             accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             onChange={(event) => {
-              setSelectedFile(event.target.files?.[0] ?? null)
-              setErrorMessage(null)
+              setUpload((current) => ({
+                ...current,
+                selectedFile: event.target.files?.[0] ?? null,
+                errorMessage: null,
+              }))
             }}
             className="upload-drop-zone__input"
           />
@@ -122,7 +150,7 @@ export const UploadDocumentOverview = () => {
               </>
             ) : (
               <>
-                <div className="upload-drop-zone__icon">📄</div>
+                <div className="upload-drop-zone__icon">↑</div>
                 <label htmlFor="upload-file-input" className="upload-drop-zone__label">
                   <strong>Загрузите документ</strong>
                   <span>Перетащите PDF или DOCX сюда, или нажмите для выбора</span>

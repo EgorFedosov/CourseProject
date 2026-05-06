@@ -237,8 +237,10 @@ a {
 
 .state-panel__link {
   justify-self: start;
-  color: var(--brand);
+  color: #fff;
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
 }
 
 .upload-form,
