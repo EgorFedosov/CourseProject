@@ -1,4 +1,4 @@
-﻿import { type FormEvent, useState } from 'react'
+﻿import { type FormEvent, type DragEvent, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ApiClientError } from '../../../shared/api/error'
 import { useUploadMutation } from '../../../shared/api/hooks/use-upload-mutation'
@@ -7,10 +7,7 @@ import { StatePanel } from '../../../shared/ui/state-panel'
 
 const formatError = (error: unknown): string => {
   if (error instanceof ApiClientError) {
-    if (error.traceId) {
-      return `${error.message} (trace_id: ${error.traceId})`
-    }
-
+    // UX-only change: hide trace_id from users, show only user-friendly message
     return error.message
   }
 
@@ -22,6 +19,29 @@ export const UploadDocumentOverview = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [uploadResult, setUploadResult] = useState<{ documentId: string; filename: string } | null>(null)
+  const [dragActive, setDragActive] = useState(false)
+
+  const handleDrag = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.type === 'dragenter' || event.type === 'dragover') {
+      setDragActive(true)
+    } else if (event.type === 'dragleave') {
+      setDragActive(false)
+    }
+  }
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    setDragActive(false)
+
+    const file = event.dataTransfer.files?.[0]
+    if (file) {
+      setSelectedFile(file)
+      setErrorMessage(null)
+    }
+  }
 
   const submitUpload = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -70,24 +90,59 @@ export const UploadDocumentOverview = () => {
   const analysisRoute = uploadResult ? `/analysis?document_id=${encodeURIComponent(uploadResult.documentId)}` : '/analysis'
 
   return (
-    <PageCard title="UploadPage" description="Точка входа для POST /api/v1/documents/upload через typed hook useUploadMutation.">
+    <PageCard title="Загрузка документа" description="">
       <form className="upload-form" onSubmit={submitUpload}>
-        <label htmlFor="upload-file-input">Документ (PDF или DOCX)</label>
-        <input
-          id="upload-file-input"
-          type="file"
-          accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-          onChange={(event) => {
-            setSelectedFile(event.target.files?.[0] ?? null)
-          }}
-        />
-        <button type="submit" disabled={uploadMutation.isPending}>
-          {uploadMutation.isPending ? 'Загрузка...' : 'Загрузить документ'}
+        {/* UX-only change: improved drag-drop zone with visual feedback */}
+        <div
+          className={`upload-drop-zone ${dragActive ? 'upload-drop-zone--active' : ''} ${selectedFile ? 'upload-drop-zone--file-selected' : ''}`}
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+        >
+          <input
+            id="upload-file-input"
+            type="file"
+            accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            onChange={(event) => {
+              setSelectedFile(event.target.files?.[0] ?? null)
+              setErrorMessage(null)
+            }}
+            className="upload-drop-zone__input"
+          />
+
+          <div className="upload-drop-zone__content">
+            {selectedFile ? (
+              <>
+                <div className="upload-drop-zone__icon">✓</div>
+                <label htmlFor="upload-file-input" className="upload-drop-zone__label">
+                  <strong>{selectedFile.name}</strong>
+                  <span>Готов к анализу. Нажмите, чтобы выбрать другой файл.</span>
+                </label>
+              </>
+            ) : (
+              <>
+                <div className="upload-drop-zone__icon">📄</div>
+                <label htmlFor="upload-file-input" className="upload-drop-zone__label">
+                  <strong>Загрузите документ</strong>
+                  <span>Перетащите PDF или DOCX сюда, или нажмите для выбора</span>
+                </label>
+              </>
+            )}
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={uploadMutation.isPending || !selectedFile}
+          className="upload-form__submit"
+        >
+          {uploadMutation.isPending ? 'Загрузка...' : 'Начать анализ'}
         </button>
       </form>
 
       {uploadMutation.isPending ? (
-        <StatePanel tone="loading" title="Загрузка документа" message="Файл отправляется в backend, подождите завершения операции." />
+        <StatePanel tone="loading" title="Загрузка документа" message="Документ загружается, подождите." />
       ) : null}
 
       {errorMessage ? (
@@ -95,21 +150,17 @@ export const UploadDocumentOverview = () => {
           tone="error"
           title="Ошибка загрузки"
           message={errorMessage}
-          actionLabel={selectedFile ? 'Повторить загрузку' : undefined}
+          actionLabel={selectedFile ? 'Попробовать ещё раз' : undefined}
           onAction={selectedFile ? retryUpload : undefined}
         />
       ) : null}
 
       {uploadResult ? (
-        <StatePanel tone="success" title="Документ загружен" message={`Файл: ${uploadResult.filename}. document_id: ${uploadResult.documentId}.`}>
+        <StatePanel tone="success" title="Документ загружен" message={`Файл «${uploadResult.filename}» загружен. Переходим к анализу...`}>
           <Link className="state-panel__link" to={analysisRoute}>
-            Перейти к AnalysisPage
+            Перейти к анализу
           </Link>
         </StatePanel>
-      ) : null}
-
-      {!uploadMutation.isPending && !errorMessage && !uploadResult ? (
-        <StatePanel tone="empty" title="Ожидание файла" message="Выберите документ для запуска дальнейшего pipeline: upload -> analysis -> report." />
       ) : null}
     </PageCard>
   )

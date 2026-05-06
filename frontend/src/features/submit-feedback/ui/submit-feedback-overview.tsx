@@ -13,10 +13,7 @@ const resolveCheckId = (searchParams: URLSearchParams): string => {
 
 const formatError = (error: unknown, fallbackMessage: string): string => {
   if (error instanceof ApiClientError) {
-    if (error.traceId) {
-      return `${error.message} (trace_id: ${error.traceId})`
-    }
-
+    // UX-only change: hide trace_id from users, show only user-friendly message
     return error.message
   }
 
@@ -53,7 +50,7 @@ export const SubmitFeedbackOverview = () => {
 
     const normalizedCheckId = checkIdInput.trim()
     if (normalizedCheckId.length === 0) {
-      setFormError('Укажите check_id для загрузки отчёта.')
+      setFormError('Укажите ID проверки для загрузки отчёта.')
       return
     }
 
@@ -118,12 +115,13 @@ export const SubmitFeedbackOverview = () => {
   const violationCodes = getUniqueViolationCodes(reportQuery.data)
 
   return (
-    <PageCard
-      title="FeedbackPage"
-      description="Форма отправки teacher-corrections: загрузка violations по GET /api/v1/reports/{check_id} и отправка POST /api/v1/feedback/corrections."
+    <PageCard 
+      title="Проверка и корректировка результата" 
+      description="Интерфейс для преподавателя. Вы можете подтвердить или исправить результаты анализа документа."
     >
+      {/* UX-only change: improved feedback form layout with teacher-focused design */}
       <form className="feedback-check-id-form" onSubmit={handleLoadReport}>
-        <label htmlFor="feedback-check-id">check_id</label>
+        <label htmlFor="feedback-check-id">ID проверки</label>
         <div className="feedback-check-id-form__controls">
           <input
             id="feedback-check-id"
@@ -131,7 +129,7 @@ export const SubmitFeedbackOverview = () => {
             type="text"
             value={checkIdInput}
             onChange={(event) => setCheckIdInput(event.target.value)}
-            placeholder="Введите check_id из этапа анализа"
+            placeholder="Введите ID проверки"
             autoComplete="off"
           />
           <button type="submit" disabled={reportQuery.isFetching}>
@@ -141,10 +139,10 @@ export const SubmitFeedbackOverview = () => {
       </form>
 
       {!activeCheckId && !reportQuery.isFetching ? (
-        <StatePanel tone="empty" title="Ожидание check_id" message="Укажите check_id для загрузки violations и отправки правок." />
+        <StatePanel tone="empty" title="Укажите ID проверки" message="Введите ID проверки, чтобы начать проверку и корректировку результатов." />
       ) : null}
 
-      {reportQuery.isFetching ? <StatePanel tone="loading" title="Загрузка отчёта" message="Получаем данные нарушений из backend." /> : null}
+      {reportQuery.isFetching ? <StatePanel tone="loading" title="Загрузка отчёта" message="Получаем данные для проверки..." /> : null}
 
       {reportQuery.error ? (
         <StatePanel
@@ -158,127 +156,146 @@ export const SubmitFeedbackOverview = () => {
         />
       ) : null}
 
-      <form className="feedback-form" onSubmit={handleSubmitFeedback}>
-        <fieldset disabled={!reportQuery.data || reportQuery.isFetching}>
-          <legend>Правки преподавателя</legend>
+      {reportQuery.data ? (
+        <form className="feedback-form" onSubmit={handleSubmitFeedback}>
+          {/* UX-only change: better visual hierarchy and grouping */}
+          <fieldset disabled={!reportQuery.data || reportQuery.isFetching}>
+            <legend>Корректировка параметров анализа</legend>
 
-          <div className="feedback-form__grid">
-            <label htmlFor="feedback-final-type">
-              final_type
-              <input
-                id="feedback-final-type"
-                name="final_type"
-                type="text"
-                value={resolvedFinalType}
-                onChange={(event) => setFinalType(event.target.value)}
-                placeholder="Например: LAB_REPORT"
-              />
-            </label>
+            {/* Document classification section */}
+            <section className="feedback-form__section">
+              <h3>Классификация документа</h3>
+              <div className="feedback-form__grid">
+                <label htmlFor="feedback-final-type" className="feedback-form__label">
+                  <span className="feedback-form__label-text">Тип документа</span>
+                  <input
+                    id="feedback-final-type"
+                    name="final_type"
+                    type="text"
+                    value={resolvedFinalType}
+                    onChange={(event) => setFinalType(event.target.value)}
+                    placeholder="Например: LAB_REPORT"
+                    className="feedback-form__input"
+                  />
+                </label>
 
-            <label htmlFor="feedback-final-semester">
-              final_semester
-              <input
-                id="feedback-final-semester"
-                name="final_semester"
-                type="number"
-                min={1}
-                step={1}
-                value={resolvedFinalSemester}
-                onChange={(event) => setFinalSemester(event.target.value)}
-                placeholder="Например: 4"
-              />
-            </label>
-          </div>
+                <label htmlFor="feedback-final-semester" className="feedback-form__label">
+                  <span className="feedback-form__label-text">Семестр</span>
+                  <input
+                    id="feedback-final-semester"
+                    name="final_semester"
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={resolvedFinalSemester}
+                    onChange={(event) => setFinalSemester(event.target.value)}
+                    placeholder="Например: 4"
+                    className="feedback-form__input"
+                  />
+                </label>
+              </div>
+            </section>
 
-          <section className="feedback-violations" aria-label="Уточнение нарушений">
-            <h2>Нарушения из отчёта</h2>
-            {violationCodes.length === 0 ? (
-              <StatePanel
-                tone="empty"
-                title="Нарушений нет"
-                message="Можно отправить только уточнение типа/семестра и комментарий преподавателя."
-              />
-            ) : (
-              <ul>
-                {violationCodes.map((code) => {
-                  const example = reportQuery.data?.violations.find((item) => item.code === code)
-                  const decision = violationDecisions[code] ?? 'confirmed'
+            {/* Violations review section */}
+            <section className="feedback-form__section feedback-violations" aria-label="Проверка нарушений">
+              <h3>Проверка и подтверждение нарушений</h3>
+              {violationCodes.length === 0 ? (
+                <StatePanel
+                  tone="empty"
+                  title="Нарушений не обнаружено"
+                  message="Анализ не выявил нарушений. Вы можете скорректировать классификацию документа и добавить комментарий."
+                />
+              ) : (
+                <div className="feedback-violations__list">
+                  {violationCodes.map((code) => {
+                    const example = reportQuery.data?.violations.find((item) => item.code === code)
+                    const decision = violationDecisions[code] ?? 'confirmed'
 
-                  return (
-                    <li key={code} className="feedback-violation-item">
-                      <div>
-                        <strong>{code}</strong>
-                        {example?.message ? <p>{example.message}</p> : null}
-                        {example?.severity || example?.category ? (
-                          <small>
-                            {example.severity ? `severity: ${example.severity}` : 'severity: n/a'} ·{' '}
-                            {example.category ? `category: ${example.category}` : 'category: n/a'}
-                          </small>
-                        ) : null}
+                    return (
+                      <div key={code} className="feedback-violation-item">
+                        <div className="feedback-violation-item__header">
+                          <div className="feedback-violation-item__info">
+                            <strong className="feedback-violation-item__code">{code}</strong>
+                            {example?.message ? <p className="feedback-violation-item__message">{example.message}</p> : null}
+                            {example?.severity || example?.category ? (
+                              <small className="feedback-violation-item__meta">
+                                {example.severity ? `Серьёзность: ${example.severity}` : null}
+                                {example.severity && example.category ? ' • ' : ''}
+                                {example.category ? `Категория: ${example.category}` : null}
+                              </small>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="feedback-violation-item__actions">
+                          <label className="feedback-violation-action">
+                            <input
+                              type="radio"
+                              name={`violation-${code}`}
+                              value="confirmed"
+                              checked={decision === 'confirmed'}
+                              onChange={() =>
+                                setViolationDecisions((current) => ({
+                                  ...current,
+                                  [code]: 'confirmed',
+                                }))
+                              }
+                            />
+                            <span>✓ Подтвердить</span>
+                          </label>
+                          <label className="feedback-violation-action">
+                            <input
+                              type="radio"
+                              name={`violation-${code}`}
+                              value="rejected"
+                              checked={decision === 'rejected'}
+                              onChange={() =>
+                                setViolationDecisions((current) => ({
+                                  ...current,
+                                  [code]: 'rejected',
+                                }))
+                              }
+                            />
+                            <span>✕ Отклонить</span>
+                          </label>
+                        </div>
                       </div>
-                      <div className="feedback-violation-actions">
-                        <label>
-                          <input
-                            type="radio"
-                            name={`violation-${code}`}
-                            value="confirmed"
-                            checked={decision === 'confirmed'}
-                            onChange={() =>
-                              setViolationDecisions((current) => ({
-                                ...current,
-                                [code]: 'confirmed',
-                              }))
-                            }
-                          />
-                          Подтвердить
-                        </label>
-                        <label>
-                          <input
-                            type="radio"
-                            name={`violation-${code}`}
-                            value="rejected"
-                            checked={decision === 'rejected'}
-                            onChange={() =>
-                              setViolationDecisions((current) => ({
-                                ...current,
-                                [code]: 'rejected',
-                              }))
-                            }
-                          />
-                          Отклонить
-                        </label>
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
-          </section>
+                    )
+                  })}
+                </div>
+              )}
+            </section>
 
-          <label htmlFor="feedback-teacher-comment">
-            teacher_comment
-            <textarea
-              id="feedback-teacher-comment"
-              name="teacher_comment"
-              value={teacherComment}
-              onChange={(event) => setTeacherComment(event.target.value)}
-              rows={4}
-              placeholder="Комментарий преподавателя"
-            />
-          </label>
+            {/* Teacher notes section */}
+            <section className="feedback-form__section">
+              <h3>Комментарий преподавателя</h3>
+              <label htmlFor="feedback-teacher-comment" className="feedback-form__label">
+                <span className="feedback-form__label-text">Дополнительные замечания (опционально)</span>
+                <textarea
+                  id="feedback-teacher-comment"
+                  name="teacher_comment"
+                  value={teacherComment}
+                  onChange={(event) => setTeacherComment(event.target.value)}
+                  rows={4}
+                  placeholder="Введите ваши замечания и рекомендации..."
+                  className="feedback-form__textarea"
+                />
+              </label>
+            </section>
 
-          <div className="feedback-actions">
-            <button type="submit" disabled={submitMutation.isPending || !reportQuery.data}>
-              {submitMutation.isPending ? 'Отправка...' : 'Отправить правки'}
-            </button>
-          </div>
-        </fieldset>
-      </form>
+            {/* Submit button */}
+            <div className="feedback-actions">
+              <button type="submit" disabled={submitMutation.isPending || !reportQuery.data} className="feedback-actions__submit">
+                {submitMutation.isPending ? 'Отправка правок...' : 'Отправить правки'}
+              </button>
+            </div>
+          </fieldset>
+        </form>
+      ) : null}
 
-      {submitMutation.isPending ? <StatePanel tone="loading" title="Отправка правок" message="Сохраняем teacher corrections в backend." /> : null}
+      {submitMutation.isPending ? <StatePanel tone="loading" title="Отправка правок" message="Сохраняем правки на сервере..." /> : null}
 
-      {formError ? <StatePanel tone="error" title="Ошибка формы" message={formError} /> : null}
-      {submitResult ? <StatePanel tone="success" title="Успешная отправка" message={submitResult} /> : null}
+      {formError ? <StatePanel tone="error" title="Ошибка при отправке" message={formError} /> : null}
+      {submitResult ? <StatePanel tone="success" title="Правки успешно отправлены" message={submitResult} /> : null}
     </PageCard>
   )
 }

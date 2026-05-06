@@ -1,6 +1,5 @@
-﻿import { type FormEvent, useState } from 'react'
+﻿import { type FormEvent, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { AnalysisStatusTimeline } from '../../analysis-status/ui/analysis-status-timeline'
 import { ApiClientError } from '../../../shared/api/error'
 import { useAnalysisStatusQuery } from '../../../shared/api/hooks/use-analysis-status-query'
 import { useStartAnalysisMutation } from '../../../shared/api/hooks/use-start-analysis-mutation'
@@ -13,14 +12,35 @@ const resolveParam = (params: URLSearchParams, key: string): string => {
 
 const formatError = (error: unknown, fallback: string): string => {
   if (error instanceof ApiClientError) {
-    if (error.traceId) {
-      return `${error.message} (trace_id: ${error.traceId})`
-    }
-
+    // UX-only change: hide trace_id from users, show only user-friendly message
     return error.message
   }
 
   return fallback
+}
+
+const getPipelineStages = (status?: string): Array<{ id: string; name: string; active: boolean; completed: boolean }> => {
+  // UX-only change: show analysis pipeline stages
+  const stages = [
+    { id: 'init', name: 'Инициализация', active: false, completed: false },
+    { id: 'classify', name: 'Классификация', active: false, completed: false },
+    { id: 'validate', name: 'Проверка', active: false, completed: false },
+    { id: 'report', name: 'Формирование отчета', active: false, completed: false },
+  ]
+
+  switch (status) {
+    case 'REPORT_READY':
+      return stages.map((s) => ({ ...s, completed: true }))
+    case 'ANALYZING':
+      // Show all stages as in-progress (active means current or in-progress)
+      return stages.map((s, idx) => ({
+        ...s,
+        active: idx < stages.length - 1,
+        completed: idx < 1,
+      }))
+    default:
+      return stages
+  }
 }
 
 export const StartAnalysisOverview = () => {
@@ -35,6 +55,12 @@ export const StartAnalysisOverview = () => {
 
   const startMutation = useStartAnalysisMutation()
   const statusQuery = useAnalysisStatusQuery(activeCheckId)
+
+  // UX-only change: compute pipeline stages based on status
+  const pipelineStages = useMemo(
+    () => getPipelineStages(statusQuery.data?.status),
+    [statusQuery.data?.status]
+  )
 
   const startAnalysis = async () => {
     if (startMutation.isPending) {
@@ -75,40 +101,42 @@ export const StartAnalysisOverview = () => {
   const reportRoute = activeCheckId ? `/report?check_id=${encodeURIComponent(activeCheckId)}` : '/report'
 
   return (
-    <PageCard
-      title="AnalysisPage"
-      description="Точки входа для POST /api/v1/analyses/start (useStartAnalysisMutation) и GET /api/v1/analyses/{check_id} (useAnalysisStatusQuery)."
-    >
+    <PageCard title="Проверка документа" description="">
+      {/* UX-only change: improved form layout and messaging */}
       <form className="analysis-form" onSubmit={submitStart}>
-        <label htmlFor="analysis-document-id">document_id</label>
-        <input
-          id="analysis-document-id"
-          type="text"
-          value={documentId}
-          onChange={(event) => setDocumentId(event.target.value)}
-          placeholder="document_id после upload"
-          autoComplete="off"
-        />
+        {!activeCheckId ? (
+          <>
+            <label htmlFor="analysis-document-id">ID документа</label>
+            <input
+              id="analysis-document-id"
+              type="text"
+              value={documentId}
+              onChange={(event) => setDocumentId(event.target.value)}
+              placeholder="Введите ID документа"
+              autoComplete="off"
+            />
 
-        <label htmlFor="analysis-requested-by">requested_by</label>
-        <input
-          id="analysis-requested-by"
-          type="text"
-          value={requestedBy}
-          onChange={(event) => setRequestedBy(event.target.value)}
-          placeholder="teacher@course.local"
-          autoComplete="off"
-        />
+            <label htmlFor="analysis-requested-by">Запрашивает</label>
+            <input
+              id="analysis-requested-by"
+              type="text"
+              value={requestedBy}
+              onChange={(event) => setRequestedBy(event.target.value)}
+              placeholder="Например, ваш email"
+              autoComplete="off"
+            />
+          </>
+        ) : null}
 
-        <button type="submit" disabled={startMutation.isPending}>
-          {startMutation.isPending ? 'Запуск...' : 'Запустить анализ'}
-        </button>
+        {!activeCheckId ? (
+          <button type="submit" disabled={startMutation.isPending}>
+            {startMutation.isPending ? 'Запуск...' : 'Запустить анализ'}
+          </button>
+        ) : null}
       </form>
 
-      <AnalysisStatusTimeline />
-
       {startMutation.isPending ? (
-        <StatePanel tone="loading" title="Старт анализа" message="Backend запускает pipeline проверки документа." />
+        <StatePanel tone="loading" title="Анализ запускается" message="Проверка документа начата, подождите." />
       ) : null}
 
       {startError ? (
@@ -116,19 +144,19 @@ export const StartAnalysisOverview = () => {
       ) : null}
 
       {!activeCheckId && !startError && !startMutation.isPending ? (
-        <StatePanel tone="empty" title="Ожидание запуска" message="Запустите анализ, чтобы получить check_id и статус pipeline." />
+        <StatePanel tone="empty" title="Готово к проверке" message="Укажите параметры и запустите анализ, чтобы получить результат." />
       ) : null}
 
       {activeCheckId && statusQuery.isLoading ? (
-        <StatePanel tone="loading" title="Получение статуса" message={`Проверяем текущий status для check_id: ${activeCheckId}.`} />
+        <StatePanel tone="loading" title="Получаем статус" message="Проверяем состояние проверки..." />
       ) : null}
 
       {activeCheckId && statusQuery.error ? (
         <StatePanel
           tone="error"
           title="Статус недоступен"
-          message={formatError(statusQuery.error, 'Не удалось получить статус анализа.')}
-          actionLabel="Повторить запрос статуса"
+          message={formatError(statusQuery.error, 'Не удалось получить статус проверки.')}
+          actionLabel="Повторить"
           onAction={() => {
             void statusQuery.refetch()
           }}
@@ -139,8 +167,8 @@ export const StartAnalysisOverview = () => {
         <StatePanel
           tone="error"
           title="Анализ завершился с ошибкой"
-          message={statusQuery.data.error ?? 'Pipeline вернул статус ERROR без подробностей.'}
-          actionLabel="Повторить запрос статуса"
+          message={statusQuery.data.error ?? 'Произошла ошибка в процессе проверки.'}
+          actionLabel="Повторить"
           onAction={() => {
             void statusQuery.refetch()
           }}
@@ -148,17 +176,43 @@ export const StartAnalysisOverview = () => {
       ) : null}
 
       {statusQuery.data && statusQuery.data.status !== 'ERROR' ? (
-        <StatePanel
-          tone={statusQuery.data.status === 'REPORT_READY' ? 'success' : 'loading'}
-          title={statusQuery.data.status === 'REPORT_READY' ? 'Отчёт готов' : 'Анализ выполняется'}
-          message={`status: ${statusQuery.data.status}${typeof statusQuery.data.progress === 'number' ? `, progress: ${statusQuery.data.progress}%` : ''}`}
-        >
-          {statusQuery.data.status === 'REPORT_READY' ? (
-            <Link className="state-panel__link" to={reportRoute}>
-              Перейти к ReportPage
-            </Link>
-          ) : null}
-        </StatePanel>
+        <>
+          {/* UX-only change: show pipeline progress */}
+          <section className="analysis-pipeline" aria-label="Этапы анализа">
+            <h2>Этапы проверки</h2>
+            <div className="analysis-pipeline__stages">
+              {pipelineStages.map((stage) => (
+                <div
+                  key={stage.id}
+                  className={`analysis-pipeline__stage ${stage.completed ? 'analysis-pipeline__stage--completed' : ''} ${stage.active ? 'analysis-pipeline__stage--active' : ''}`}
+                >
+                  <div className="analysis-pipeline__stage-icon">
+                    {stage.completed ? '✓' : stage.active ? '⟳' : '·'}
+                  </div>
+                  <div className="analysis-pipeline__stage-label">{stage.name}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <StatePanel
+            tone={statusQuery.data.status === 'REPORT_READY' ? 'success' : 'loading'}
+            title={statusQuery.data.status === 'REPORT_READY' ? 'Отчёт готов' : 'Анализ выполняется'}
+            message={
+              statusQuery.data.status === 'REPORT_READY'
+                ? 'Готово к просмотру отчёта.'
+                : typeof statusQuery.data.progress === 'number'
+                ? `Идёт проверка — ${statusQuery.data.progress}% готово.`
+                : 'Идёт проверка, подождите.'
+            }
+          >
+            {statusQuery.data.status === 'REPORT_READY' ? (
+              <Link className="state-panel__link" to={reportRoute}>
+                Открыть отчёт
+              </Link>
+            ) : null}
+          </StatePanel>
+        </>
       ) : null}
     </PageCard>
   )
