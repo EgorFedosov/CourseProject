@@ -8,7 +8,7 @@ interface PageCardProps {
 
 export const PageCard = ({ title, description, children }: PageCardProps) => {
   return (
-    <section className="page-card animate__animated animate__fadeInUp animate__faster">
+    <section className="page-card page-card--enter animate__animated animate__fadeInUp">
       <header className="page-card__header">
         <h1>{title}</h1>
         {description ? <p>{description}</p> : null}

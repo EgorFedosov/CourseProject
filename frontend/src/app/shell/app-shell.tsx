@@ -22,7 +22,7 @@ export const AppShell = () => {
             <p>Автоматическая проверка документов на соответствие требованиям.</p>
             <HealthStatusBadge />
           </div>
-          <nav className="app-nav animate__animated animate__fadeInUp animate__faster" aria-label="Основная навигация">
+          <nav className="app-nav app-nav--enter animate__animated animate__fadeInUp" aria-label="Основная навигация">
             {navigationRoutes.map((route) => (
               <NavLink key={route.path} to={route.path} className={navClassName} title={route.hint}>
                 {route.label}
