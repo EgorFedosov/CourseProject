@@ -8,14 +8,21 @@ const navClassName = ({ isActive }: { isActive: boolean }) =>
 export const AppShell = () => {
   return (
     <div className="app-shell">
+      <div className="app-background" aria-hidden="true">
+        <div className="app-background__layer app-background__layer--base" />
+        <div className="app-background__layer app-background__layer--grid" />
+        <div className="app-background__shape app-background__shape--left animate__animated animate__pulse animate__infinite animate__slower" />
+        <div className="app-background__shape app-background__shape--right animate__animated animate__pulse animate__infinite animate__slower animate__delay-1s" />
+      </div>
+
       <header className="app-header">
         <div className="app-header__content">
-          <div className="app-header__hero">
+          <div className="app-header__hero animate__animated animate__fadeInDown animate__faster">
             <h1>Intelligent Document Checker</h1>
             <p>Автоматическая проверка документов на соответствие требованиям.</p>
             <HealthStatusBadge />
           </div>
-          <nav className="app-nav" aria-label="Основная навигация">
+          <nav className="app-nav animate__animated animate__fadeInUp animate__faster" aria-label="Основная навигация">
             {navigationRoutes.map((route) => (
               <NavLink key={route.path} to={route.path} className={navClassName} title={route.hint}>
                 {route.label}
