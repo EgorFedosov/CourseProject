@@ -21,6 +21,20 @@ const ruleTitleMap: Record<string, string> = {
   'REQ-INTRO-001': 'Обязателен раздел «Введение»',
   'REQ-CONCLUSION-001': 'Обязателен раздел «Заключение»',
   'REQ-FONT-001': 'Требование к основному шрифту',
+  'REQ-ABSTRACT-001': 'Обязателен раздел «Abstract»',
+  'REQ-METHODOLOGY-001': 'Обязателен раздел «Methodology»',
+  'REQ-RESULTS-001': 'Обязателен раздел «Results»',
+  'REQ-REFERENCES-001': 'Обязателен раздел «References»',
+  'REQ-LAB-INTRO-001': 'Lab report: обязателен раздел Introduction',
+  'REQ-LAB-EQUIPMENT-001': 'Lab report: обязателен раздел Equipment and Setup',
+  'REQ-LAB-RESULTS-001': 'Lab report: обязателен раздел Results',
+  'REQ-LAB-CONCLUSION-001': 'Lab report: обязателен раздел Conclusion',
+  'REQ-LAB-FONT-001': 'Lab report: требование к шрифту Helvetica 12',
+  'REQ-CW-INTRO-001': 'Course work: обязателен раздел Introduction',
+  'REQ-CW-ANALYSIS-001': 'Course work: обязателен раздел Analysis',
+  'REQ-CW-CONCLUSION-001': 'Course work: обязателен раздел Conclusion',
+  'REQ-CW-REFERENCES-001': 'Course work: обязателен раздел References',
+  'REQ-CW-FONT-001': 'Course work: требование к шрифту Calibri 12',
 }
 
 export const formatDocumentType = (value: string | null | undefined): string => {

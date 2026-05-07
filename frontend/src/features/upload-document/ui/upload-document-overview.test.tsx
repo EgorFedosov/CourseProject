@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
+﻿import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TabsStateProvider } from '../../../app/providers/tabs-state-provider'
@@ -35,14 +35,12 @@ describe('UploadDocumentOverview', () => {
     })
   })
 
-  it('keeps submit button disabled when file is missing', () => {
-    const { container } = renderFeature()
-    const submitButton = container.querySelector<HTMLButtonElement>('button[type="submit"]')
-    expect(submitButton).not.toBeNull()
-    expect(submitButton).toBeDisabled()
+  it('does not render manual start analysis button', () => {
+    const { queryByRole } = renderFeature()
+    expect(queryByRole('button', { name: 'Начать анализ' })).toBeNull()
   })
 
-  it('renders analysis link after successful upload', async () => {
+  it('uploads automatically after file selection and renders analysis link', async () => {
     mockMutateAsync.mockResolvedValue({
       document_id: 'doc-1',
       filename: 'report.pdf',
@@ -58,10 +56,6 @@ describe('UploadDocumentOverview', () => {
     fireEvent.change(fileInput as HTMLInputElement, {
       target: { files: [file] },
     })
-
-    const submitButton = container.querySelector<HTMLButtonElement>('button[type="submit"]')
-    expect(submitButton).not.toBeNull()
-    fireEvent.click(submitButton as HTMLButtonElement)
 
     await waitFor(() => {
       expect(mockMutateAsync).toHaveBeenCalledTimes(1)

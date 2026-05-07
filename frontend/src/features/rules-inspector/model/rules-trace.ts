@@ -17,6 +17,20 @@ const knownRuleFallbackMeta: Record<string, { category: string; severity: string
   'REQ-INTRO-001': { category: 'structure', severity: 'high' },
   'REQ-CONCLUSION-001': { category: 'structure', severity: 'high' },
   'REQ-FONT-001': { category: 'formatting', severity: 'medium' },
+  'REQ-ABSTRACT-001': { category: 'structure', severity: 'medium' },
+  'REQ-METHODOLOGY-001': { category: 'structure', severity: 'medium' },
+  'REQ-RESULTS-001': { category: 'structure', severity: 'medium' },
+  'REQ-REFERENCES-001': { category: 'structure', severity: 'medium' },
+  'REQ-LAB-INTRO-001': { category: 'structure', severity: 'high' },
+  'REQ-LAB-EQUIPMENT-001': { category: 'structure', severity: 'high' },
+  'REQ-LAB-RESULTS-001': { category: 'structure', severity: 'high' },
+  'REQ-LAB-CONCLUSION-001': { category: 'structure', severity: 'high' },
+  'REQ-LAB-FONT-001': { category: 'formatting', severity: 'medium' },
+  'REQ-CW-INTRO-001': { category: 'structure', severity: 'high' },
+  'REQ-CW-ANALYSIS-001': { category: 'structure', severity: 'high' },
+  'REQ-CW-CONCLUSION-001': { category: 'structure', severity: 'high' },
+  'REQ-CW-REFERENCES-001': { category: 'structure', severity: 'medium' },
+  'REQ-CW-FONT-001': { category: 'formatting', severity: 'medium' },
 }
 
 export const buildRulesTrace = (report: ReportResponse | undefined): RuleTraceItem[] => {

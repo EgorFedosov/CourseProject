@@ -581,6 +581,24 @@ npm run dev
 5. На вкладке `Правки` отправьте correction case.
 6. На вкладке `Правила` проверьте трассировку применённых правил.
 
+### 11.7 Готовые тестовые документы в корне проекта
+Старые пустые `sample_upload_*` удалены. Вместо них добавлены более реалистичные примеры:
+
+1. `example_course_project_sem4_compliant.docx`
+2. `example_course_project_sem4_structure_issues.pdf`
+3. `example_lab_report_sem2_compliant.pdf`
+4. `example_lab_report_sem2_structure_issues.docx`
+5. `example_course_work_sem6_compliant.docx`
+6. `example_course_work_sem6_font_issues.pdf`
+
+Ожидаемые результаты (по умолчанию seed-правилам):
+1. `example_course_project_sem4_compliant.docx` -> `compliant`.
+2. `example_course_project_sem4_structure_issues.pdf` -> нарушения по отсутствующим разделам и шрифту.
+3. `example_lab_report_sem2_compliant.pdf` -> `compliant`.
+4. `example_lab_report_sem2_structure_issues.docx` -> нарушения по разделам `Equipment and Setup`, `Results` и правилу шрифта.
+5. `example_course_work_sem6_compliant.docx` -> `compliant`.
+6. `example_course_work_sem6_font_issues.pdf` -> нарушение только по правилу шрифта.
+
 ---
 
 ## 12) Что чаще всего сбивает с толку
